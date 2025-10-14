@@ -11,8 +11,6 @@ load_dotenv()
 
 # Get the connection string from the environment variable
 conn_string = os.getenv("DATABASE_URL")
-fields, stations = csv_loader(Path("data/stations.csv"))
-# print(stations)
 
 try:
     with psycopg.connect(conn_string) as conn:
@@ -20,13 +18,10 @@ try:
 
         # Open a cursor to perform database operations
         with conn.cursor() as cur:
-            # Drop the table if it already exists
-            cur.execute("DROP TABLE IF EXISTS stations;")
-            print("Finished dropping table (if it existed).")
-
+            
             # Create a new table
             cur.execute("""
-                CREATE TABLE stations (
+                CREATE TABLE IF NOT EXISTS  stations (
                     station_id SERIAL PRIMARY KEY,
                     notation VARCHAR(50) UNIQUE NOT NULL,
                     label VARCHAR(255) NOT NULL,
@@ -38,20 +33,32 @@ try:
                 );
             """)
                     
-            print("Finished creating table.")
+            print("Finished creating table `stations`.")
             
             
             # Load locally pre-cached station data
             fields, stations = csv_loader(Path("data/stations.csv"))
-
-            # Insert multiple books at once
             cur.executemany(
                 "INSERT INTO stations (notation, label, lat, long, qualifier, unitName) VALUES (%s, %s, %s, %s, %s, %s);",
                 stations,
             )
 
-            print(f"Inserted {len(stations)} rows of data.")
-            # The transaction is committed automatically when the 'with' block exits in psycopg (v3)
+            print(f"Inserted {len(stations)} rows of data to stations.")
+            
+            # initialise readings table
+            
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS readings (
+                    reading_id BIGSERIAL PRIMARY KEY,
+                    station_id INTEGER NOT NULL REFERENCES stations(station_id) ON DELETE CASCADE,
+                    value DOUBLE PRECISION NOT NULL,
+                    date_time TIMESTAMP NOT NULL,
+                    unit_name VARCHAR(100),
+                    UNIQUE (station_id, date_time)
+                );
+            """)
+            print("Finished creating table `readings`.")
+            
 
 except Exception as e:
     print("Connection failed.")
