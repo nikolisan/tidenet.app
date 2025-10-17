@@ -4,8 +4,6 @@ import requests
 from requests.exceptions import HTTPError
 from io import StringIO
 from pathlib import Path
-import asyncio
-import aiohttp
 
 def find_delim(path):
     with open(path, 'r', newline="") as csvfile:  # python 3: 'r',newline=""
@@ -13,7 +11,7 @@ def find_delim(path):
         csvfile.seek(0)
     return d.delimiter
 
-def csv_to_pd(file:str | Path, delimiter:str=None, infer_delimiter:bool=True, has_header:bool=True) -> tuple[list, list, str]:
+def csv_to_memory(file:str | Path, delimiter:str=None, infer_delimiter:bool=True, has_header:bool=True) -> tuple[list, list, str]:
     """Read a locally cached csv into memory.
 
     Args:
@@ -123,7 +121,6 @@ def process_historical_csv(df: pd.DataFrame) -> pd.DataFrame:
     df["dateTime"] = pd.to_datetime(df["dateTime"], utc=True)
     df = df[["dateTime", "station_id", "value", "unit_name"]]
     return df
-
 
 async def async_csv_to_pd(session, url, semaphore, delimiter=None, header=0):
     async with semaphore:  # limit concurrency

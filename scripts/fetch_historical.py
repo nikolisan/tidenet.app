@@ -1,14 +1,13 @@
 import os
-import psycopg
+import math
 import pandas as pd
 import time
 import aiohttp
 import asyncio
 from tqdm.asyncio import tqdm_asyncio
 from tqdm import tqdm
+from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
-
-
 
 from scripts.csv_loader import url_to_pd, process_historical_csv, async_csv_to_pd
 from scripts.utilities import coloured_fn_name
@@ -16,12 +15,13 @@ from scripts.utilities import coloured_fn_name
 load_dotenv()
 
 # Get the connection string from the environment variable
-CONN_STRING = os.getenv("DATABASE_URL")
+CONN_STRING = os.getenv("DATABASE_URL_SQLALCHEMY")
 API_ROOT = os.getenv("API_ROOT")
 
 def insert_readings_to_db(readings_df:pd.DataFrame):
+    engine = create_engine(CONN_STRING, pool_pre_ping=True)
     fn_name = coloured_fn_name("CYAN")
-    with psycopg.connect(CONN_STRING) as conn:
+    with engine.begin() as conn:
         print(f"{fn_name} Connection established")
         stations_df = pd.read_sql("SELECT notation, station_id FROM stations", conn)
         stations_df["notation"] = stations_df["notation"].apply(lambda row: row.split("-")[0])
@@ -38,15 +38,29 @@ def insert_readings_to_db(readings_df:pd.DataFrame):
             columns={"station_id_db": "station_id", "dateTime": "date_time"}
         )
         
-        records = [tuple(x) for x in merged_df.to_numpy()]
-        with conn.cursor() as cur:
-            query = """
-                INSERT INTO readings (station_id, value, date_time, unit_name)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (station_id, date_time)
-                DO UPDATE SET value=EXCLUDED.value;
-            """
-            cur.executemany(query, records) 
+        merged_df = merged_df.drop_duplicates(subset=["station_id", "date_time"])
+        
+        chunksize = 5000
+        total_rows = len(merged_df)
+        num_chunks = math.ceil(total_rows / chunksize)
+        
+        for i in tqdm(range(num_chunks), desc=f"{fn_name} Inserting historical"):
+            chunk = merged_df.iloc[i*chunksize : (i+1)*chunksize]
+            chunk.to_sql(
+                "readings",
+                con=conn,
+                if_exists="append",
+                index=False,
+                method="multi"
+            )
+        # merged_df.to_sql(
+        #     "readings",                 # table name
+        #     con=conn,                   # SQLAlchemy connection
+        #     if_exists="append",          # append new rows
+        #     index=False,                 # don’t insert DataFrame index
+        #     method="multi",              # batch inserts
+        #     chunksize=1000               # tune for your system
+        # )
 
 def fetch_historical_daterange(date_list:list, throttle:float=1):
     fn_name = coloured_fn_name("CYAN")
@@ -94,14 +108,20 @@ if __name__ == "__main__":
         (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
         for i in range((end_date - start_date).days + 1)
     ]
-    # combined_df = asyncio.run(async_fetch_historical_daterange(date_list, throttle=0.1, max_concurrent=10))
-    # combined_df = fetch_historical_daterange(date_list, throttle=0.1)
+    combined_df = asyncio.run(async_fetch_historical_daterange(date_list, throttle=0.1, max_concurrent=10))
+    combined_df = fetch_historical_daterange(date_list, throttle=0.1)
     # combined_df.to_pickle(Path("./.helpers/historical.pickle"))
     # import pickle
     
-    combined_df = pd.read_pickle(Path("./.helpers/historical.pickle"))
+    # combined_df = pd.read_pickle(Path("./.helpers/historical.pickle"))
     insert_readings_to_db(combined_df)
-        
+
+    # --- test ---
+    engine = create_engine(CONN_STRING, pool_pre_ping=True)
+    with engine.connect() as conn:
+        df = pd.read_sql("SELECT * FROM readings", conn)
+    
+    print(len(df))
         
         
         
