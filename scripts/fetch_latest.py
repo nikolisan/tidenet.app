@@ -5,8 +5,6 @@ from  datetime import datetime
 from requests.exceptions import HTTPError
 from dotenv import load_dotenv
 
-from pathlib import Path
-
 load_dotenv()
 
 # Get the connection string from the environment variable
