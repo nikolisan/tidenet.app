@@ -15,7 +15,7 @@ async_engine: Optional[Engine] = None
 
 load_dotenv()
 
-CONN_STRING = os.getenv("DATABASE_URL_SQLALCHEMY")
+CONN_STRING: str = os.getenv("DATABASE_URL_SQLALCHEMY", "")
 
 # def fetch_station_labels_from_db_mine(CONN_STRING):
 #     engine = create_engine(CONN_STRING, pool_pre_ping=True)
@@ -169,10 +169,9 @@ async def get_readings_data(station_label: str):
 
     # Data Transformation
     # The datetime objects from the DB are converted to ISO strings by Pydantic's serialization
-    date_times = [r.date_time.isoformat() for r in readings]
-    values = [r.value for r in readings]
-    station_id = [r.station_id for r in readings]
-    station_label = [r.station_label for r in readings]
+    date_times: List[str] = [r.date_time.isoformat() for r in readings]
+    values: List[float] = [r.value for r in readings]
+    station_id: List[int] = [r.station_id for r in readings]
     
     # more than 1 station return => throw error
     if not len(set(station_id)) == 1:
@@ -182,7 +181,7 @@ async def get_readings_data(station_label: str):
     try:
         response = StationDataResponse(
             station_id=station_id[0],
-            station_label=station_label[0],
+            station_label=station_label,
             date_time=date_times,
             values=values,
             unit="mAOD"
