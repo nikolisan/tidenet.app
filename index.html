@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Station Data Dashboard</title>
+        <!-- Tailwind CSS -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Serif">
+        <style>body { font-family: 'PT Serif', serif; }</style>
+        <!-- Plotly.js -->
+        <script src="https://cdn.plot.ly/plotly-2.29.1.min.js"></script>
+    </head>
+    <body class="bg-gray-100 min-h-screen p-4 sm:p-8">
+
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <header class="text-center mb-8">
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800 tracking-tight">
+                    Real-time Station Readings
+                </h1>
+                <p class="text-gray-500 mt-2">
+                    Select a station to view its historical data.
+                </p>
+            </header>
+
+            <!-- Controls -->
+            <div class="bg-white p-6 rounded-xl shadow-lg mb-8 flex flex-col sm:flex-row items-center justify-between">
+                <label for="station-select" class="text-lg font-medium text-gray-700 mr-4 mb-3 sm:mb-0">
+                    Select Station:
+                </label>
+                <select id="station-select" 
+                        class="w-full sm:w-2/3 md:w-1/2 p-3 border border-gray-300 rounded-lg bg-white shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out">
+                </select>
+            </div>
+
+            <!-- Chart -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 id="chart-title" class="text-xl font-semibold text-gray-800 mb-4">Loading Data...</h2>
+                <div id="plotly-chart" class="relative h-[500px]"></div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading-indicator" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
+                <div class="flex items-center space-x-2 bg-white p-4 rounded-lg shadow-2xl">
+                    <svg class="animate-spin h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-gray-700 font-medium">Fetching Data...</span>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const API_BASE_URL = 'http://127.0.0.1:8000';
+            const selectElement = document.getElementById('station-select');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const chartTitle = document.getElementById('chart-title');
+            const plotDiv = document.getElementById('plotly-chart');
+
+            // Range select buttons
+            var selectorOptions = {
+                buttons: [
+                {   step: 'day',
+                    stepmode: 'backward',
+                    count: 1,
+                    label: '1d'
+                }, 
+                {   step: 'day',
+                    stepmode: 'backward',
+                    count: 7,
+                    label: '7d'
+                }, {
+                    step: 'month',
+                    stepmode: 'backward',
+                    count: 1,
+                    label: '1m'
+                }, {
+                    step: 'month',
+                    stepmode: 'backward',
+                    count: 6,
+                    label: '6m'
+                }, {
+                    step: 'year',
+                    stepmode: 'todate',
+                    count: 1,
+                    label: 'YTD'
+                }, {
+                    step: 'year',
+                    stepmode: 'backward',
+                    count: 1,
+                    label: '1y'
+                }, {
+                    step: 'all',
+                }],
+            };
+
+
+            function showLoading() { loadingIndicator.classList.remove('hidden'); }
+            function hideLoading() { loadingIndicator.classList.add('hidden'); }
+
+            function updateChartTitle(stationId, stationLabel) {
+                chartTitle.textContent = `Water level readings for Station: ${stationLabel}`;
+            }
+
+            function displayMessage(message, stationId = null) {
+                chartTitle.textContent = stationId 
+                    ? `No Data Found for Station: ${stationId}` 
+                    : message;
+                Plotly.purge(plotDiv);
+            }
+
+            async function fetchAndRenderChart(stationId) {
+                showLoading();
+                try {
+                    const url = `${API_BASE_URL}/data/${stationId}`;
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        if (response.status === 404) displayMessage('Station not found.', stationId);
+                        else throw new Error(`API returned status ${response.status}`);
+                        return;
+                    }
+
+                    const data = await response.json();
+                    const minX = new Date(data.date_time[0]).getTime();   // earliest timestamp
+                    const maxX = new Date(data.date_time[data.date_time.length-1]).getTime(); // latest timestamp
+
+                    updateChartTitle(data.station_id, data.station_label);
+
+                    const trace = {
+                        x: data.date_time,
+                        y: data.values,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: `Elevation (${data.unit})`,
+                        line: { color: 'rgb(79,70,229)', width: 2 },
+                    };
+
+                    const layout = {
+                        margin: { t: 40, r: 30, b: 50, l: 60 },
+                        xaxis: {
+                            title: 'Date and Time',
+                            type: 'date',
+                            showspikes: true,
+                            rangeselector: selectorOptions,
+                            rangeslider: {}
+                        },
+                        yaxis: { title: `Elevation (${data.unit})`, fixedrange: true},
+                        hovermode: 'x unified',
+                        dragmode: 'pan',
+                        showlegend: true,
+                        legend:{
+                            x: 0.8,
+                            y: 1.2
+                        }
+                    };
+
+                    const config = { responsive: true, scrollZoom: true, displayModeBar: false };
+
+                    await Plotly.newPlot(plotDiv, [trace], layout, config);
+
+                    // --- Attach dynamic tick formatting ---
+                    plotDiv.addEventListener('plotly_relayout', () => {
+                        const ax = plotDiv._fullLayout.xaxis; // pass axis object to your function
+                        const visibleTicks = ax._t; // current tick positions
+                        if (!visibleTicks) return;
+
+                        visibleTicks.forEach(tickVal => {
+                            const out = { x: tickVal };
+                            formatDate(ax, out, false, false); // use your function
+                            // update tick text (hack: update layout tickvals/ticktext)
+                        });
+
+                        // Build new ticktext array
+                        const ticktext = visibleTicks.map(tickVal => {
+                            const out = { x: tickVal };
+                            formatDate(ax, out, false, false);
+                            return out.text;
+                        });
+
+                        Plotly.relayout(plotDiv, {
+                            'xaxis.tickvals': visibleTicks,
+                            'xaxis.ticktext': ticktext
+                        });
+                    });
+
+                } catch (error) {
+                    console.error("Plotly rendering error:", error);
+                    displayMessage('Failed to connect to the API or process data.');
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            async function populateStations() {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/stations`);
+                    if (!response.ok) throw new Error("Failed to fetch station list.");
+                    const stations = await response.json();
+
+                    if (stations.length === 0) {
+                        displayMessage("No station data available in the database.");
+                        return;
+                    }
+
+                    stations.forEach(station => {
+                        const option = document.createElement('option');
+                        option.value = station;
+                        option.textContent = station;
+                        selectElement.appendChild(option);
+                    });
+
+                    selectElement.addEventListener('change', (event) => {
+                        fetchAndRenderChart(event.target.value);
+                    });
+
+                    const defaultStation = stations[0];
+                    selectElement.value = defaultStation;
+                    fetchAndRenderChart(defaultStation);
+
+                } catch (error) {
+                    console.error("Initialization error:", error);
+                    displayMessage(`Error initializing dashboard. Is the API running at ${API_BASE_URL}?`);
+                }
+            }
+            window.onload = populateStations;
+        </script>
+    </body>
+</html>
