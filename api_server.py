@@ -6,12 +6,11 @@ from typing import List, Optional
 from sqlalchemy import create_engine, text, Engine
 from dotenv import load_dotenv
 from pydantic import ValidationError
-from contextlib import asynccontextmanager
 
 from models import Reading, StationDataResponse
 
 AsyncSessionLocal = None
-async_engine: Optional[Engine] = None
+sync_engine: Optional[Engine] = None
 
 load_dotenv()
 
@@ -30,19 +29,19 @@ async def lifespan(app: FastAPI):
     Handles the asynchronous startup (connect) and shutdown (disconnect) of the 
     synchronous SQLAlchemy engine.
     """
-    global async_engine
+    global sync_engine
     print("Initializing SQLAlchemy Synchronous Engine...")
     
     try:
         # Create the synchronous engine with connection pooling
-        async_engine = create_engine(
+        sync_engine = create_engine(
             CONN_STRING,
             echo=True,
             # pool_pre_ping is useful to check connections before use
             pool_pre_ping=True
         )
         # Test connection (optional, but good practice)
-        with async_engine.connect() as conn:
+        with sync_engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         
         print("SQLAlchemy Synchronous Engine initialized successfully.")
@@ -53,9 +52,9 @@ async def lifespan(app: FastAPI):
     yield # Application is now ready to serve requests
 
     # Shutdown phase: close connections
-    if async_engine:
+    if sync_engine:
         print("Disposing SQLAlchemy Engine...")
-        async_engine.dispose()
+        sync_engine.dispose()
         print("Engine disposed.")
 
 app = FastAPI(title="Async FastAPI & SQLAlchemy Demo", lifespan=lifespan)
@@ -70,9 +69,9 @@ app.add_middleware(
 
 def get_db_engine() -> Engine:
     """Helper to retrieve the initialized engine."""
-    if async_engine is None:
+    if sync_engine is None:
         raise ConnectionError("SQLAlchemy Engine is unavailable.")
-    return async_engine
+    return sync_engine
 
 def fetch_station_labels_from_db() -> List[str]:
     """
