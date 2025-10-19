@@ -1,18 +1,10 @@
-import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, text, Engine
+from sqlalchemy import text
 from contextlib import asynccontextmanager
 
 from app.db import create_db_engine
-# from .api.endpoints import stations, data
 from .api import api
-
-# from pydantic import ValidationError
-
-# from app.models import Reading, StationDataResponse
-
-# AsyncSessionLocal = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

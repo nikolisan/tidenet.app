@@ -1,4 +1,4 @@
-from fastapi import HTTPException, APIRouter, Request
+from fastapi import APIRouter
 from .endpoints import stations, data
 
 router = APIRouter(

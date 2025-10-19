@@ -1,7 +1,5 @@
 from fastapi import HTTPException, APIRouter, Request
-from pydantic import ValidationError
 from sqlalchemy import text, CursorResult
-from typing import List
 
 from app.models import Station
 
