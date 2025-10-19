@@ -20,7 +20,7 @@ def fetch_readings_for_station(station_label:str, request: Request, start_date: 
     if end_date == "today" or end_date == None:
         end: pendulum.DateTime = today
     else:
-        end: pendulum.DateTime = pendulum.parse(end_date).in_timezone("UTC")
+        end: pendulum.DateTime = pendulum.parse(end_date).in_timezone("UTC") # type: ignore
 
     max_range = end.subtract(months=6)
     if start < max_range:

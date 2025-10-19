@@ -5,7 +5,8 @@ from sqlalchemy import create_engine, text, Engine
 from contextlib import asynccontextmanager
 
 from app.db import create_db_engine
-from .api.endpoints import stations, data
+# from .api.endpoints import stations, data
+from .api import api
 
 # from pydantic import ValidationError
 
@@ -54,5 +55,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(stations.router)
-app.include_router(data.router)
+app.include_router(api.router)
