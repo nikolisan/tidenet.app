@@ -13,7 +13,7 @@ router = APIRouter(
 
 
 @router.get("/")
-async def get_stations(request: Request):
+async def get_stations(request: Request) -> dict:
     """
     Endpoint that calls the synchronous DB function. FastAPI automatically handles 
     thread pooling for the blocking operation.
@@ -27,15 +27,21 @@ async def get_stations(request: Request):
                 SELECT 
                     s.label,
                     s.station_id,
-                    MAX(r.date_time) AS latest_reading
+                    MAX(r.date_time) AS latest_reading,
+                    s.lat,
+                    s.long
                 FROM stations s
                 JOIN readings r ON s.station_id = r.station_id
                 GROUP BY s.label, s.station_id
                 ORDER BY s.label ASC;
             """            
             with engine.connect() as conn:
+                stations = {}
                 result: CursorResult = conn.execute(text(query))
-                stations = [Station(label=row[0], station_id=row[1], date_time=row[2]) for row in result]
+                for row in result:
+                    stations[row[0]] = Station(label=row[0], station_id=row[1], date_time=row[2], lat=row[3], lon=row[4])
+                    
+                # stations = [Station(label=row[0], station_id=row[1], date_time=row[2]) for row in result]
                 
             return stations
         

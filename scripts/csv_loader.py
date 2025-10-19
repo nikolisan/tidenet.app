@@ -5,6 +5,8 @@ from requests.exceptions import HTTPError
 from io import StringIO
 from pathlib import Path
 
+
+
 def find_delim(path):
     with open(path, 'r', newline="") as csvfile:  # python 3: 'r',newline=""
         d = csv.Sniffer().sniff(csvfile.read(1024))
@@ -104,6 +106,7 @@ def url_to_pd(url:str, retries:int=5, delimiter:str=None, has_header:bool|int=Tr
         return pd.read_csv(data, sep=delimiter, header=header, engine='python')
 
 def process_historical_csv(df: pd.DataFrame) -> pd.DataFrame:
+    IQR_MULTIPLIER = 3.0
     def _convert_to_float(x):
         try:
             return float(x)
@@ -112,13 +115,38 @@ def process_historical_csv(df: pd.DataFrame) -> pd.DataFrame:
         
     df["value"] = df["value"].apply(_convert_to_float)
     df = df.dropna(subset=["value"]).copy()
-
-    # Extract station_id and unit_name safely
+    
+    # Extract station_id and unit_name temporarily for grouping/filtering
     df["station_id"] = df["measure"].apply(lambda row: row.split("/")[-1].split("-")[0])
     df["unit_name"] = df["measure"].apply(lambda row: row.split("/")[-1].split("-")[-1])
-    df = df.drop("measure", axis=1)
-    df = df[df["unit_name"]=="mAOD"]
     df["dateTime"] = pd.to_datetime(df["dateTime"], utc=True)
+    
+    # Filter for only the 'mAOD' unit immediately
+    df = df[df["unit_name"]=="mAOD"].copy()
+    
+
+    df = df[df['dateTime'].dt.minute == 0].copy()
+    # Filter outliers
+    # Q1 = df["value"].quantile(0.25)
+    # Q3 = df["value"].quantile(0.75)
+    # IQR = Q3 - Q1
+    # LOWER_BOUND = Q1 - IQR_MULTIPLIER * IQR
+    # UPPER_BOUND = Q3 + IQR_MULTIPLIER * IQR
+    # is_outlier = (df["value"] < LOWER_BOUND) | (df["value"] > UPPER_BOUND)
+    # temp_df = df.copy()
+    # temp_df['is_outlier'] = is_outlier
+    # temp_df["dateTime"] = pd.to_datetime(temp_df["dateTime"], utc=True)
+    # temp_df = temp_df.sort_values(by=["station_id", "dateTime"])
+    
+    # temp_df['rolling_outlier_sum'] = temp_df.groupby('station_id')['is_outlier'].rolling(window=3, min_periods=2).sum().reset_index(level=0, drop=True)
+    # rows_to_keep = (~temp_df['is_outlier']) | (temp_df['rolling_outlier_sum'] >= 2)
+    
+
+    
+    # df = temp_df[rows_to_keep].drop(columns=['is_outlier', 'rolling_outlier_sum']).copy()
+    
+    
+    df = df.drop("measure", axis=1)
     df = df[["dateTime", "station_id", "value", "unit_name"]]
     return df
 

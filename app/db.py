@@ -8,12 +8,13 @@ load_dotenv()
 def create_db_engine() -> Engine:
     """Create a new SQLAlchemy Engine."""
     conn_string = os.getenv("DATABASE_URL_SQLALCHEMY", "")
+    echo = os.getenv("DEBUG_ECHO", 'False').lower() in ('true')
     if not conn_string:
         raise ValueError("DATABASE_URL_SQLALCHEMY is not set in the environment.")
     
     engine = create_engine(
         conn_string,
-        echo=True,
+        echo=echo,
         pool_pre_ping=True
     )
 
