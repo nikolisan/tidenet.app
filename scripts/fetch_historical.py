@@ -100,8 +100,8 @@ if __name__ == "__main__":
     from pathlib import Path
     import pendulum
 
-    start_date = pendulum.date(2025, 1, 1)
-    end_date = pendulum.date(2025, 10, 17)
+    start_date = pendulum.date(2024, 11, 11)
+    end_date = pendulum.date(2024, 12, 31)
 
     date_list = [
         (start_date.add(days=i)).to_date_string() 
