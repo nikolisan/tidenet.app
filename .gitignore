@@ -222,3 +222,6 @@ __marimo__/
 
 # Custom
 .helpers/
+
+# node modules
+*node_modules/
