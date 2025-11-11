@@ -1,7 +1,6 @@
-import React from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
-
+import Breadcrumbs from './Breadcrumb';
 
 const Layout = ({ children }) => {
   return (
@@ -21,6 +20,7 @@ const Layout = ({ children }) => {
         </div>
       </div>
       <main className="flex-grow p-8 container mx-auto">
+        <Breadcrumbs />
         {children}
       </main>
       <Footer />

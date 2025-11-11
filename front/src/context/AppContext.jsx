@@ -1,25 +1,30 @@
 import React, { createContext, useReducer, useEffect, useContext } from 'react';
+import { DateTime } from "luxon";
 import axios from 'axios';
 
-// --- 1. Define Initial State and Contexts ---
+// --- Initial State and Contexts ---
+
 const initialState = {
+  appTheme: 'light',
   isLoading: true,
   stations: [], 
   selectedStation: null, 
   dateRange: {
-    start: null, 
-    end: null,   
+    start: DateTime.now().toUTC().minus({months: 1}), 
+    end: DateTime.now().toUTC(),   
   },
   error: null,
 };
 
-// Create separate contexts for state and dispatch for optimization 
 const AppStateContext = createContext(initialState);
 const AppDispatchContext = createContext(() => {});
 
-// --- 2. Define Reducer Function ---
+// --- Reducer Function ---
 const appReducer = (state, action) => {
   switch (action.type) {
+    case 'SET_THEME':
+      document.querySelector('html').setAttribute('data-theme', action.payload);
+      return {...state, appTheme: action.payload};
     case 'SET_STATIONS':
       return {...state, stations: action.payload, isLoading: false, error: null };
     case 'SELECT_STATION':
@@ -33,7 +38,7 @@ const appReducer = (state, action) => {
   }
 };
 
-// --- 3. App Provider Component ---
+// --- App Provider Component ---
 export const AppProvider = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
@@ -47,14 +52,19 @@ export const AppProvider = ({ children }) => {
         console.log("API Response Data for /api/stations:", response.data);
         const stationArray = Object.values(response.data)
         dispatch({ type: 'SET_STATIONS', payload: stationArray });
-        dispatch({ type: 'SELECT_STATION', payload: stationArray[0].label });
+
+        if (stationArray.length > 0) {
+          const selectedStationPayload = { ...stationArray[0], listId: 0 };
+          dispatch({ type: 'SELECT_STATION', payload: selectedStationPayload  });
+        }
+
       } catch (err) {
         console.error('Error fetching stations:', err);
         dispatch({ type: 'SET_ERROR', payload: 'Failed to load station data.' });
       }
     };
     fetchStations();
-  }, []); 
+  }, []);
 
   return (
     <AppStateContext.Provider value={state}>
@@ -65,6 +75,6 @@ export const AppProvider = ({ children }) => {
   );
 };
 
-// --- 4. Custom Hooks for State Access ---
+// --- Custom Hooks for State Access ---
 export const useAppState = () => useContext(AppStateContext);
 export const useAppDispatch = () => useContext(AppDispatchContext);

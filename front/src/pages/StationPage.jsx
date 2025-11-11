@@ -1,35 +1,40 @@
-import React, { useEffect } from 'react';
 import Layout from '../components/Layout';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAppState, useAppDispatch } from '../context/AppContext';
 import StationChart from '../components/StationChart';
-import CallyRangePicker from '../components/CallyRangePicker';
+import { DateTime } from "luxon";
+import DatePicker from '../components/DatePicker';
+
 
 const StationPage = () => {
-  const { label } = useParams();
   const { stations, selectedStation, isLoading } = useAppState();
+
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+   
 
-  // Effect to ensure selectedStation state is correct upon page load/refresh
-  useEffect(() => {
-    if (isLoading) return;
-
-    if (!selectedStation || selectedStation.label!== label) {
-      const station = stations.find(s => s.label === label);
-      if (station) {
-        dispatch({ type: 'SELECT_STATION', payload: station });
-      } else {
-        // If station doesn't exist, redirect to the main page
-        navigate('/');
-      }
+  const handleNavigationClick = (event) =>{
+    if (!selectedStation) return;
+    const currentIndex = selectedStation.listId;
+    const id = event.target.id;
+    const maxIndex = stations.length - 1;
+    let newIndex;
+    if (id === 'next') {
+      newIndex = currentIndex === maxIndex ? 0 : currentIndex + 1;
+    } else if (id === 'previous') {
+      newIndex = currentIndex === 0 ? maxIndex : currentIndex - 1;
     }
-  },);
+    const station = stations[newIndex]
+    const selectedStationPayload = { ...station, listId: newIndex };
+    dispatch({ type: 'SELECT_STATION', payload: selectedStationPayload });
+    navigate(`/station/${station.label}`);
+  }
 
-  if (isLoading ||!selectedStation || selectedStation.label!== label) {
+
+  if (isLoading) {
     return (
         <Layout>
-            <div className="flex justify-center items-center h-96">
+            <div className="skeleton flex justify-center items-center h-96">
                 <span className="loading loading-spinner loading-lg"></span>
             </div>
         </Layout>
@@ -38,25 +43,21 @@ const StationPage = () => {
 
   return (
     <Layout>
-      <div className="flex flex-col gap-6">
-        {/* Header and Subheader driven by global state [Image 2] */}
-        <h1 className="text-3xl font-bold">
-          Header: {selectedStation.label}
-        </h1>
-        <h2 className="text-xl text-gray-600">
-          Subheader: Latest Read ({selectedStation.date_time.toString() || 'N/A'})
+      <div className="flex flex-col gap-2">
+        <h2 className="text-l font-medium text-secondary font-sans ">
+          Latest reading: <span className='font-light'>
+              {DateTime.fromISO(selectedStation.date_time).toUTC().toLocaleString(DateTime.DATETIME_FULL)}
+            </span>
         </h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Panel: Line Chart */}
           <div className="lg:col-span-2">
-            {/* <StationChart /> */}
-            Station Chart
+            <StationChart />
           </div>
-
-          {/* Right Panel: Calendar */}
-          <div className="lg:col-span-1">
-            <CallyRangePicker />
+          <DatePicker />
+          <div className='lg:col-span-2 flex flex-row'>
+            <p id='previous' className='link link-hover text-sm font-light mr-auto' onClick={handleNavigationClick}>{"< Previous"}</p>
+            <p id='next' className='link link-hover text-sm font-light ml-auto' onClick={handleNavigationClick}>{"Next >"}</p>
           </div>
         </div>
       </div>
