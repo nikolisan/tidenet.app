@@ -39,11 +39,14 @@ def init_database():
             # --- Load pre-cached station data ---
             stations_df = csv_to_pd(Path("data/stations.csv"), delimiter=None, has_header=True)
             # pd.to_sql does not support ON CONFLICT -> use reqular SQL
-            conn.execute(text("""
-                INSERT INTO stations (notation, label, lat, long, qualifier, unitName)
-                VALUES (:notation, :label, :lat, :long, :qualifier, :unitName)
-                ON CONFLICT (notation) DO NOTHING;
-            """), stations_df.to_dict(orient="records"))
+            # conn.execute(text("""
+            #     INSERT INTO stations (notation, label, lat, long, qualifier, unitName)
+            #     VALUES (:notation, :label, :lat, :long, :qualifier, :unitName)
+            #     ON CONFLICT (notation) DO NOTHING;
+            # """), stations_df.to_dict(orient="records"))
+            
+
+
 
             print(f"{coloured_fn_name("CYAN")} Inserted {len(stations_df)} station records into `stations`.")
 

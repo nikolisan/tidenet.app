@@ -4,7 +4,6 @@ import pandas as pd
 import time
 import aiohttp
 import asyncio
-from tqdm.asyncio import tqdm_asyncio
 from tqdm import tqdm
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
@@ -20,8 +19,12 @@ CONN_STRING = os.getenv("DATABASE_URL_SQLALCHEMY")
 API_ROOT = os.getenv("API_ROOT")
 
 def insert_readings_to_db(readings_df:pd.DataFrame):
-    engine = create_engine(CONN_STRING, pool_pre_ping=True)
     fn_name = coloured_fn_name("CYAN")
+    
+    if not CONN_STRING:
+        raise ValueError(f"{fn_name} DB Connection string is empty")
+    
+    engine = create_engine(CONN_STRING, pool_pre_ping=True)
     
     with engine.begin() as conn:
         print(f"{fn_name} Connection established")
@@ -62,6 +65,10 @@ def insert_readings_to_db(readings_df:pd.DataFrame):
 
 def fetch_historical_daterange(date_list:list, throttle:float=1):
     fn_name = coloured_fn_name("CYAN")
+    
+    if not API_ROOT:
+        raise ValueError(f"{fn_name} API_ROOT string is empty")
+    
     readings_list = []
     
     with tqdm(total=len(date_list), desc=f'{fn_name} Fetching') as pbar:
@@ -78,6 +85,10 @@ def fetch_historical_daterange(date_list:list, throttle:float=1):
 
 async def async_fetch_historical_daterange(date_list: list, throttle: float = 1, max_concurrent:int=5):
     fn_name = coloured_fn_name("CYAN")
+    
+    if not API_ROOT:
+        raise ValueError(f"{fn_name} API_ROOT string is empty")
+    
     semaphore = asyncio.Semaphore(max_concurrent)
     
     print(f'{fn_name} Fetching historical information for {date_list[0]} to {date_list[-1]} ...')
@@ -100,8 +111,8 @@ if __name__ == "__main__":
     from pathlib import Path
     import pendulum
 
-    start_date = pendulum.date(2024, 11, 11)
-    end_date = pendulum.date(2024, 12, 31)
+    start_date = pendulum.date(2025, 10, 16)
+    end_date = pendulum.date(2025, 11, 10)
 
     date_list = [
         (start_date.add(days=i)).to_date_string() 
@@ -115,6 +126,8 @@ if __name__ == "__main__":
     insert_readings_to_db(combined_df)
 
     # --- test ---
+    if not CONN_STRING:
+        raise ValueError(f"fetch_historical.__main__: CONN_STRING string is empty")
     engine = create_engine(CONN_STRING, pool_pre_ping=True)
     with engine.connect() as conn:
         df = pd.read_sql("SELECT * FROM readings", conn)
