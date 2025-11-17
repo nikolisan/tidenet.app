@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 
 const StationChart = () => {
-  const { selectedStation, dateRange, error } = useAppState();
+  const { selectedStation, dateRange, error, baseUrl } = useAppState();
   const dispatch = useAppDispatch();
   // local state
   const [loading, setLoading] = useState(false);
@@ -30,7 +30,7 @@ const StationChart = () => {
         setChartData([]); 
 
         try {
-          let apiUrl = `http://localhost:8000/api/data/${selectedStation.label}`;
+          let apiUrl = `${baseUrl}/api/data/${selectedStation.label}`;
           const hasDates = startDate && endDate;
           if (hasDates) {
             // Append dates only if both are present

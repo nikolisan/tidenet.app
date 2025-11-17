@@ -12,6 +12,7 @@ import 'chartjs-adapter-luxon';
 import { getElementsAtEvent, Line } from 'react-chartjs-2';
 import { tooltip } from 'leaflet';
 
+
 const hoverHighlight = {
   id: 'hoverHighlight',
   // Draw the custom highlight *after* Chart.js has drawn the main elements
@@ -84,7 +85,7 @@ export const _cssVarToHSL = (name) => {
 
 const StationChart = () => {
   
-  const { selectedStation, dateRange, error } = useAppState();
+  const { selectedStation, dateRange, error, baseUrl } = useAppState();
   const dispatch = useAppDispatch();
   // local state
   const [loading, setLoading] = useState(false);
@@ -179,7 +180,7 @@ const StationChart = () => {
         setLoading(true);
 
         try {
-          let apiUrl = `http://localhost:8000/api/data/${selectedStation.label}`;
+          let apiUrl = `${baseUrl}/api/data/${selectedStation.label}`;
           const hasDates = startDate && endDate;
           if (hasDates) {
             apiUrl += `?start_date=${startDate}&end_date=${endDate}`;

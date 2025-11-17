@@ -3,10 +3,12 @@ import { DateTime } from "luxon";
 import axios from 'axios';
 
 // --- Initial State and Contexts ---
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const initialState = {
   appTheme: 'light',
   isLoading: true,
+  baseUrl: baseUrl,
   stations: [], 
   selectedStation: null, 
   dateRange: {
@@ -47,7 +49,8 @@ export const AppProvider = ({ children }) => {
     const fetchStations = async () => {
       try {
         // Assume FastAPI runs on port 8000
-        const response = await axios.get('http://localhost:8000/api/stations');
+        let apiUrl = `${state.baseUrl}/api/stations`;
+        const response = await axios.get(apiUrl);
 
         console.log("API Response Data for /api/stations:", response.data);
         const stationArray = Object.values(response.data)
