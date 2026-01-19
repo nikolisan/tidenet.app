@@ -223,6 +223,7 @@ __marimo__/
 
 # Custom
 .helpers/
+.python-version
 
 # node modules
 *node_modules/

@@ -46,8 +46,6 @@ def init_database():
             # """), stations_df.to_dict(orient="records"))
             
 
-
-
             print(f"{coloured_fn_name("CYAN")} Inserted {len(stations_df)} station records into `stations`.")
 
             # --- Create `readings` table ---

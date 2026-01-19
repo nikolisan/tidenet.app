@@ -1,7 +1,8 @@
 from fastapi import HTTPException, APIRouter, Request
 from pydantic import ValidationError
 from sqlalchemy import text, CursorResult
-from typing import List, Optional
+from sqlalchemy.engine import RowMapping
+from typing import List, Optional, Sequence
 import pendulum
 
 from app.models import Reading, StationDataResponse
@@ -33,7 +34,11 @@ def fetch_readings_for_station(station_label:str, request: Request, start_date: 
         if engine is None:
             raise ConnectionError("SQLAlchemy Engine is unavailable.")
         query = """
-            SELECT r.date_time AT TIME ZONE 'UTC', r.value, r.station_id, s.label
+            SELECT 
+                r.date_time AT TIME ZONE 'UTC' AS date_time, 
+                r.value, 
+                r.station_id, 
+                s.label AS station_label
             FROM readings r
             JOIN stations s ON r.station_id = s.station_id
             WHERE s.label = :station_label
@@ -41,8 +46,25 @@ def fetch_readings_for_station(station_label:str, request: Request, start_date: 
             ORDER BY r.date_time ASC;
         """       
         with engine.connect() as conn:
-            result: CursorResult = conn.execute(text(query), {"station_label": station_label, "start_date": start.to_iso8601_string(), "end_date": end.to_iso8601_string()})
-            readings = [Reading(date_time=row[0], value=row[1],station_id=row[2],station_label=row[3]) for row in result]
+            result: CursorResult = conn.execute(
+                text(query),
+                {
+                    "station_label": station_label,
+                    "start_date": start.to_iso8601_string(),
+                    "end_date": end.to_iso8601_string(),
+                },
+            )
+            rows: Sequence[RowMapping] = result.mappings().all()
+                
+            readings = [
+                Reading(
+                    date_time=row["date_time"],
+                    value=row["value"],
+                    station_id=row["station_id"],
+                    station_label=row["station_label"],
+                )
+                for row in rows
+            ]
                 
         return readings
             
