@@ -6,89 +6,25 @@
 
 
 
-
-
-
-@plugin "daisyui/theme" {
-  name: "dark";
-  default: false;
-  prefersdark: true;
-  color-scheme: "dark";
-  --color-base-100: hsl(226.2 19.4% 26.3%);
-  --color-base-200: hsl(222.0 26.3% 14.9%);
-  --color-base-300: hsl(219.3 46.0% 12.4%);
-  --color-base-content: oklch(97.807% 0.029 256.847);
-  --color-primary: oklch(0.662 0.075 259.8);
-  --color-primary-alpha: oklch(0.662 0.075 259.8 / 0.6);
-  --color-primary-content: oklch(0.235 0.042 262.7);
-  --color-secondary: hsl(90.0 2.4% 66.7%);
-  --color-secondary-content: oklch(0.255 0.042 262.7);
-  --color-accent: hsl(219.8 36.0% 51.6%);
-  --color-accent-content: oklch(0.235 0.042 262.7);
-  --color-neutral: oklch(0.250 0.005 285.8);
-  --color-neutral-content: oklch(92% 0.004 286.32);
-  --color-info: hsl(196.1 55.1% 38.4%);
-  --color-info-content: hsl(204.8 85.2% 10.6%);
-  --color-success: hsl(155.1 30.5% 41.8%);
-  --color-success-content: hsl(164.6 100.0% 7.6%);
-  --color-warning: oklch(0.671 0.094 87.3);
-  --color-warning-content: hsl(33.0 90.9% 4.3%);
-  --color-error: hsl(345.5 46.3% 47.5%);
-  --color-error-content: oklch(0.908 0.005 114.5);
-  --radius-selector: 1rem;
-  --radius-field: 0.5rem;
-  --radius-box: 1rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 1;
-  --noise: 0;
-}
-
-
-@plugin "daisyui/theme" {
-  name: "light";
-  default: true;
-  prefersdark: false;
-  color-scheme: "light";
-  --color-base-100: oklch(92% 0.013 255.508);
-  --color-base-200: oklch(86% 0.022 252.894);
-  --color-base-300: oklch(70% 0.015 286.067);
-  --color-base-content: oklch(20% 0.042 265.755);
-  --color-primary: oklch(44% 0.11 240.79);
-  --color-primary-alpha: oklch(44% 0.11 240.79 / 0.6);
-  --color-primary-content: oklch(93% 0.034 272.788);
-  --color-secondary: oklch(28% 0.091 267.935);
-  --color-secondary-content: oklch(94% 0.028 342.258);
-  --color-accent: oklch(42% 0.199 265.638);
-  --color-accent-content: oklch(88% 0.059 254.128);
-  --color-neutral: oklch(39% 0.09 240.876);
-  --color-neutral-content: oklch(92% 0.004 286.32);
-  --color-info: oklch(71% 0.143 215.221);
-  --color-info-content: oklch(29% 0.066 243.157);
-  --color-success: oklch(72% 0.219 149.579);
-  --color-success-content: oklch(37% 0.077 168.94);
-  --color-warning: oklch(79% 0.184 86.047);
-  --color-warning-content: oklch(41% 0.112 45.904);
-  --color-error: oklch(71% 0.194 13.428);
-  --color-error-content: oklch(27% 0.105 12.094);
-  --radius-selector: 1rem;
-  --radius-field: 0.5rem;
-  --radius-box: 1rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 1;
-  --noise: 0;
-}
-
-
-
-
 /* @import "leaflet/dist/leaflet.css"; */
 
 .cally {
   /* This class specifically targets and styles the Cally Web Component */
   @apply bg-base-100 shadow-xl rounded-box p-4;
 }
+
+
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
 

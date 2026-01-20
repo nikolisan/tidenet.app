@@ -19,6 +19,7 @@ class Station(BaseModel):
     label: str
     station_id: int
     date_time: datetime
+    latest_reading: float
     lat: float
     lon: float
     

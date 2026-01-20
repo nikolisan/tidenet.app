@@ -1,11 +1,15 @@
 import { useMemo } from 'react';
 import Layout from '../components/Layout';
 import { useAppState, useAppDispatch } from '../context/AppContext';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import moment from 'moment';
+
+import { Waves, ArrowRight, MapPinned  } from 'lucide-react';
+
 // Map imports
 import { MapContainer, TileLayer, useMap, Marker, Popup, Tooltip } from 'react-leaflet'
 import L from 'leaflet';
+import ScrollArea from '../components/ScrollArea';
 
 
 const MapContainerBox = ({ stations = []}) => {
@@ -18,9 +22,8 @@ const MapContainerBox = ({ stations = []}) => {
     
     const customSvgHtml = `
       <div class="${iconColorClass}" style="filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));">
-        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/>
-          <circle cx="12" cy="10" r="3"/>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="8"/>
         </svg>
       </div>
     `;
@@ -28,8 +31,8 @@ const MapContainerBox = ({ stations = []}) => {
     return new L.divIcon({
       html: customSvgHtml,
       className: 'bg-transparent',
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
     });
   }, []);
 
@@ -50,8 +53,8 @@ const MapContainerBox = ({ stations = []}) => {
   const tileUrl = getTileUrl(appTheme);
 
   return (
-    <div className="h-[70vh] w-full">
-      <MapContainer className="card shadow-xl" key={appTheme} center={[55.1, -3.018]} zoom={6} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+    <div className="h-[70vh] relative z-0">
+      <MapContainer className="card shadow-xl" key={appTheme} center={[55.1, -3.018]} zoom={6} scrollWheelZoom={false} style={{ height: '100%', width: '100%', zIndex: 0 }}>
         <TileLayer
           attribution='&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url={tileUrl}
@@ -82,18 +85,67 @@ const MapContainerBox = ({ stations = []}) => {
 const MainPage = () => {
   const { stations, isLoading, error } = useAppState();
 
-  if (error) {
-    return <Layout><div className="alert alert-error">{error}</div></Layout>;
-  }
+  // if (error) {
+  //   return <Layout><div className="alert alert-error">{error}</div></Layout>;
+  // }
   return (
     <Layout>
-        {isLoading? (
-          <div className="flex justify-center items-center h-96">
-            <span className="loading loading-spinner loading-lg"></span>
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-4xl font-bold tracking-tight">TideNet</h1>
+            <p className="text-2xl font-light text-muted-foreground">
+                near real-time tide and surge readings
+            </p>
           </div>
-        ) : (
-          <MapContainerBox stations={stations} />
-        )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Map Section */}
+            <div className="lg:col-span-2">
+              <div className="card border border-base-200 shadow-xl bg-base-100">
+                <div className="card-body gap-4 p-4">
+                  <div className="flex items-center gap-2">
+                    <MapPinned className="w-5 h-5" />
+                    <h2 className="card-title text-lg">Map View</h2>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Click a marker to view detailed tide data</p>
+                </div>
+                {isLoading ? (
+                  <div className="flex justify-center items-center h-[70vh]">
+                    <span className="loading loading-spinner loading-lg"></span>
+                  </div>
+                ) : (
+                  <MapContainerBox stations={stations} />
+                )}
+              </div>
+            </div>
+
+            {/* Active Stations Section */}
+            <div className="flex flex-col gap-4">
+              <h2 className="text-2xl font-semibold">Active Stations</h2>
+              <div className="w-full">
+                <ScrollArea className="h-[70vh] w-full">
+                  <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 w-full pr-4">
+                  {stations.map((station, index) => (
+                    <Link key={station.station_id} to={`/station/${station.label}`}>
+                      <div class="stats shadow border border-base-200 w-full h-32 overflow-hidden">
+                        <div class="stat w-full">
+                          <div className='stat-figure text-secondary'>
+                            <ArrowRight />
+                          </div>
+                          <div class="stat-title">{station.label}</div>
+                          <div class="stat-value text-primary">{station.latest_reading.toFixed(1)} m</div>
+                          <div class="stat-desc">{moment.utc(station.date_time).format('D MMMM YYYY, hh:mm')}</div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          </div>
+
+        </div>
     </Layout>
   );
 };
