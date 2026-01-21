@@ -1,5 +1,6 @@
-import { useRef, useImperativeHandle, forwardRef, useState, useEffect } from 'react';
+import { useRef, useImperativeHandle, forwardRef } from 'react';
 import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import { useAppState, useAppDispatch } from '../context/AppContext';
 import { AlertBox } from '../components/Alert';
 
@@ -101,12 +102,44 @@ export const _cssVarToRGBA = (name) => {
 
 const StationChart = forwardRef((props, ref) => {
   
-  const { selectedStation, dateRange, error, baseUrl } = useAppState();
+  // const { selectedStation, dateRange, error, baseUrl } = useAppState();
+  const { selectedStation, dateRange, baseUrl } = useAppState();
   const dispatch = useAppDispatch();
   // local state
-  const [loading, setLoading] = useState(false);
-  const [chartData, setChartData] = useState([]);
+  // const [loading, setLoading] = useState(false);
+  // const [chartData, setChartData] = useState([]);
   const chartRef = useRef();
+
+  const startDate = dateRange.start;
+  const endDate = dateRange.end;
+
+  const fetchChartData = async () => {
+    let apiUrl = `${baseUrl}/api/data/${selectedStation.label}`;
+    if (startDate && endDate) {
+      apiUrl += `?start_date=${startDate}&end_date=${endDate}`;
+    }
+    const response = await axios.get(apiUrl);
+    const rawData = response.data;
+    const transformedData = [];
+    if (rawData.date_time && rawData.values && rawData.date_time.length === rawData.values.length) {
+      for (let i = 0; i < rawData.date_time.length; i++) {
+        transformedData.push({
+          date_time: rawData.date_time[i],
+          elevation: rawData.values[i], 
+        });
+      }
+    }
+    else {
+      throw new Error('Received malformed data. Please try again.');
+    }
+    return transformedData;
+  };
+
+  const { data: chartData = [], isLoading, error } = useQuery({
+    queryKey: ['chartData', selectedStation?.label, startDate, endDate],
+    queryFn: fetchChartData,
+    enabled: !!selectedStation, // Only run if a station is selected
+  });
 
   useImperativeHandle(ref, () => ({
     getChartImage: () => {
@@ -226,75 +259,18 @@ const StationChart = forwardRef((props, ref) => {
     }
   };
 
-  // Add data to chart. How to get the chart object????
-  const addData = (chart, label, newData) => {
-    chart.data.labels.push(label);
-    chart.data.datasets.forEach((dataset) => {
-      dataset.data.push(newData);
-    });
-    chart.update();
-  }
-
-  useEffect(() => {
-      if (!selectedStation) {
-        setChartData([]);
-        return;
-      }
-          
-
-      const startDate = dateRange.start;
-      const endDate = dateRange.end;
-
-      const fetchData = async () => {
-        setLoading(true);
-
-        try {
-          let apiUrl = `${baseUrl}/api/data/${selectedStation.label}`;
-          const hasDates = startDate && endDate;
-          if (hasDates) {
-            apiUrl += `?start_date=${startDate}&end_date=${endDate}`;
-          }
-          const response = await axios.get(apiUrl);
-          const rawData = response.data;
-
-          const transformedData = [];
-          if (rawData.date_time && rawData.values && rawData.date_time.length === rawData.values.length) {
-            
-            for (let i = 0; i < rawData.date_time.length; i++) {
-              transformedData.push({
-                date_time: rawData.date_time[i],
-                elevation: rawData.values[i], 
-              });
-            }
-          }
-
-          setChartData(transformedData);
-          
-        } catch (err) {
-          console.log("Error: ", err)
-          dispatch({ type: 'SET_ERROR', payload: 'Failed to load tide data.' })
-          setChartData([]);
-
-        } finally {
-          setLoading(false);
-        }
-      };      
-      fetchData();  
-    }, [selectedStation, dateRange]);
-
-
-    
-  // --- Render Logic ---
-
+  
   return (
     <div className="card p-6 h-[40vh]">
       {
-        loading 
+        // loading
+        isLoading 
         ? (
           <div className="skeleton bg-base-200 text-center p-10 h-[60vh]" />
         ) 
         : error ? (
-          <AlertBox type="ERROR" message={error} />
+          <AlertBox type="ERROR" message={error.message} />
+          // <AlertBox type="ERROR" message={error} />
         )
         : (!selectedStation) ? (
           <AlertBox type="ERROR" message={"Select a station to view data."} />

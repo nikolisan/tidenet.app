@@ -1,5 +1,6 @@
 import React, { createContext, useReducer, useEffect, useContext } from 'react';
 import { DateTime } from "luxon";
+import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
 // --- Initial State and Contexts ---
@@ -47,29 +48,34 @@ export const AppProvider = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   // Initial data fetch for all stations on application load
-  useEffect(() => {
-    const fetchStations = async () => {
-      try {
-        // Assume FastAPI runs on port 8000
-        let apiUrl = `${state.baseUrl}/api/stations`;
-        const response = await axios.get(apiUrl);
+  
+  const fetchStations = async () => {
+    let apiUrl = `${state.baseUrl}/api/stations`;
+    const response = await axios.get(apiUrl);
+    return Object.values(response.data);
+  }
 
-        console.log("API Response Data for /api/stations:", response.data);
-        const stationArray = Object.values(response.data)
-        dispatch({ type: 'SET_STATIONS', payload: stationArray });
-
-        if (stationArray.length > 0) {
-          const selectedStationPayload = { ...stationArray[0], listId: 0 };
-          dispatch({ type: 'SELECT_STATION', payload: selectedStationPayload  });
-        }
-
-      } catch (err) {
-        console.error('Error fetching stations:', err);
-        dispatch({ type: 'SET_ERROR', payload: 'Failed to load station data.' });
+  const { data: stations, isLoading, error } = useQuery({
+    queryKey: ['stations'],
+    queryFn: fetchStations,
+  });
+  
+  useEffect( () => {
+    if (stations) {
+      dispatch({
+        type: 'SET_STATIONS',
+        payload: stations
+      });
+      if (stations.length > 0) {
+        const selectedStationPayload = { ...stations[0], listId: 0 };
+        dispatch({ type: 'SELECT_STATION', payload: selectedStationPayload });
       }
-    };
-    fetchStations();
-  }, []);
+    }
+    if (error) {
+      dispatch({ type: 'SET_ERROR', payload: 'Failed to load station data.' });
+    }
+
+  }, [stations, error]);
 
   return (
     <AppStateContext.Provider value={state}>
