@@ -1,6 +1,6 @@
 20 January 2026
-Terms of Service
-By accessing or using this application (“App”), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use the App.
+Terms and Conditions
+By accessing or using this application (“App”), you agree to be bound by these Terms and Conditions. If you do not agree to these terms, do not use the App.
 
 1. Informational Purposes Only
 The information provided by this App is for informational purposes only. While efforts are made to ensure accuracy, completeness, and timeliness, no guarantees are made regarding the validity or reliability of the data.
@@ -18,10 +18,10 @@ You acknowledge and accept full responsibility for any actions taken based on th
 You agree not to use the App for any unlawful, harmful, or abusive purposes. You must not attempt to gain unauthorized access to any part of the App or its related systems.
 
 6. Changes to Terms
-The developers reserve the right to modify these Terms of Service at any time. Continued use of the App after changes constitutes acceptance of the new terms.
+The developers reserve the right to modify these Terms and Conditions at any time. Continued use of the App after changes constitutes acceptance of the new terms.
 
 7. Governing Law
-These Terms of Service shall be governed by and construed in accordance with the laws of the applicable jurisdiction.
+These Terms and Conditions shall be governed by and construed in accordance with the laws of the applicable jurisdiction.
 
 8. Contact
-For questions regarding these Terms of Service, please contact the developers.
+For questions regarding these Terms and Conditions, please contact the developers.

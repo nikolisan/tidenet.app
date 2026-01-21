@@ -85,9 +85,9 @@ const Sidebar = ({children}) => {
               <MonitorCloud className="mr-2 h-4 w-4" />
               3rd Party Software
             </Link>
-            <Link className="btn w-full justify-start font-normal btn-ghost" to='/tos'>
+            <Link className="btn w-full justify-start font-normal btn-ghost" to='/toc'>
               <ShieldX className="mr-2 h-4 w-4" />
-              Terms of Service
+              Terms and Conditions
             </Link>
             <Link className="btn w-full justify-start font-normal btn-ghost" to='/license'>
               <Copyright className="mr-2 h-4 w-4" />

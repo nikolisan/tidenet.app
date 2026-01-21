@@ -1,4 +1,5 @@
 import { Anchor, Copyright } from 'lucide-react'
+import { Link } from 'react-router-dom';
 
 const Modal = () => {
 return (
@@ -20,10 +21,10 @@ return (
           <h4 className="font-semibold m-2 mt-4">Disclaimer</h4>
           <p className="font-light">
             The information provided by this application is for informational purposes only and is not guaranteed to be accurate, complete, or current. The developers and providers expressly disclaim all liability for any errors, omissions, or inaccuracies in the data, and for any actions taken in reliance thereon. By using this application, you acknowledge and accept full responsibility for any consequences resulting from its use, and agree to hold the developers and providers harmless from any claims or damages arising from your use of the information. 
-            <br/> For full terms and conditions, see the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" className="link link-info">Terms and Conditions</a>
+            <br/> For full terms and conditions, see the  <Link to='/toc' className="link link-info">Terms and Conditions</Link>
           </p>
           <div className="flex flex-col items-left justify-left mt-6 text-xs text-muted-foreground gap-1">
-            <span className="mt-1 text-left">Created by Nikolaos Andreakos under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" className="link link-info">GNU GPLv3 License</a>.</span>
+            <span className="mt-1 text-left">Copyright (c) 2026 Nikolaos Andreakos. Licensed under the <Link to='/license' className="link link-info">MIT License</Link>.</span>
             <span className="mt-1 text-left">
               Contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" className="link link-info">Open Government Licence v3.0</a>.
             </span>            
