@@ -16,7 +16,7 @@ const Footer = () => {
           <nav>
             <h6 className="footer-title">Social</h6>
             <div className="grid grid-flow-col gap-4">
-              <a href='https://github.com/nikolisan/surge-ntslf' target="_blank">
+              <a href='https://github.com/nikolisan/tidenet.app' target="_blank">
                 <Github />
               </a>
               <a href='https://www.linkedin.com/in/nikolaos-andreakos/' target="_blank">
