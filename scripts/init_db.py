@@ -59,7 +59,15 @@ def init_database():
                     UNIQUE (station_id, date_time)
                 );
             """))
+
             print(f"{coloured_fn_name("CYAN")} Created or verified table `readings`.")
+
+            # --- Create index on (station_id, date_time) ---
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_readings_station_time
+                ON readings (station_id, date_time);
+            """))
+            print(f"{coloured_fn_name('CYAN')} Created or verified index idx_readings_station_time on `readings`.")
 
     except Exception as e:
         print(f"{coloured_fn_name("CYAN")} Database initialization failed:")
