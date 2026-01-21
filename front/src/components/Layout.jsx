@@ -1,20 +1,31 @@
-import Navbar from './Navbar';
 import Footer from './Footer';
 import { Link, useLocation  } from "react-router";
-import { Menu, Anchor, MapPin, Home, Info, ChevronsDown } from "lucide-react";
+import { Menu, Anchor, MapPin, Home, Info, ChevronsDown, ShieldX } from "lucide-react";
 
 import { useAppState, useAppDispatch } from '../context/AppContext';
 
-import Breadcrumbs from './Breadcrumb';
 import ThemeToggle from './ThemeToggle';
 import ScrollArea from './ScrollArea';
+import Modal from './Modal';
 
 
 const Sidebar = ({children}) => {
   const { stations, appTheme } = useAppState();
-  console.log(appTheme)
+
   let location = useLocation()
-  console.log(location)
+  const dispatch = useAppDispatch();
+
+  const handleMenuClick = (station, index) => {
+    const selectedStationPayload = { ...station, listId: index };
+    dispatch({ type: 'SELECT_STATION', payload: selectedStationPayload });
+  };
+
+  const handleAbout = () => {
+    
+  }
+
+
+
   return (
     <div className="drawer lg:drawer-open">
       <input id="my-drawer-4" type="checkbox" className="drawer-toggle" />
@@ -54,11 +65,11 @@ const Sidebar = ({children}) => {
             </button>
           </Link>
           <ul className="menu w-full flex-grow">
-            <li class="menu-title">Stations</li>
+            <li className="menu-title">Stations</li>
             <ScrollArea className="h-[calc(100vh-50vh)]">
             {stations.map((station, index) => (
-              <li className={`rounded-lg text-lg ${decodeURI(location.pathname) === `/station/${station.label}` ? "menu-active" : ""}`}>
-                <Link key={station.station_id} to={`/station/${station.label}`}>
+              <li key={station.station_id}  className={`rounded-lg text-lg ${decodeURI(location.pathname) === `/station/${station.label}` ? "menu-active" : ""}`}>
+                <Link to={`/station/${station.label}`} onClick={() => handleMenuClick(station, index)}>
                   <MapPin className="mr-2 h-4 w-4 opacity-70" />
                   {station.label}
                 </Link>
@@ -70,7 +81,11 @@ const Sidebar = ({children}) => {
             </div>
           </ul>
           <div className="border-t border-base-300 mb-10">
-            <button className="btn w-full justify-start font-normal btn-ghost">
+            <button className="btn w-full justify-start font-normal btn-ghost" onClick={()=>document.getElementById('my_modal_5').showModal()}>
+              <ShieldX className="mr-2 h-4 w-4" />
+              Terms of use
+            </button>
+            <button className="btn w-full justify-start font-normal btn-ghost" onClick={()=>document.getElementById('my_modal_5').showModal()}>
               <Info className="mr-2 h-4 w-4" />
               About
             </button>
@@ -81,6 +96,9 @@ const Sidebar = ({children}) => {
           </div>
         </div>
       </div>
+      <dialog id="my_modal_5" className="modal modal-bottom sm:modal-middle">
+        <Modal />
+      </dialog>
     </div>
   );
 
@@ -90,16 +108,12 @@ const Sidebar = ({children}) => {
 
 const Layout = ({ children }) => {
   return (
-    <div className="flex flex-col h-screen">
-      {/* <Navbar /> */}
-      <Sidebar>
-        <main className="flex-grow px-8 py-4 container mx-auto overflow-auto">
-          <Breadcrumbs />
-          {children}
-        </main>
-        <Footer className="mt-auto" />
-      </Sidebar>
-    </div>
+    <Sidebar>
+      <main className="flex-grow px-8 py-4 container mx-auto overflow-auto">
+        {children}
+      </main>
+      <Footer className="mt-auto" />
+    </Sidebar>
   );
 };
 

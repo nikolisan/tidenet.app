@@ -4,12 +4,14 @@ import { useAppState, useAppDispatch } from '../context/AppContext';
 import { Link, useNavigate } from 'react-router-dom';
 import moment from 'moment';
 
-import { Waves, ArrowRight, MapPinned  } from 'lucide-react';
+import { Waves, MapPinned, Info, ChevronsRight  } from 'lucide-react';
 
 // Map imports
 import { MapContainer, TileLayer, useMap, Marker, Popup, Tooltip } from 'react-leaflet'
 import L from 'leaflet';
 import ScrollArea from '../components/ScrollArea';
+
+const themeDark = import.meta.env.VITE_DARK_THEME;
 
 
 const MapContainerBox = ({ stations = []}) => {
@@ -45,7 +47,7 @@ const MapContainerBox = ({ stations = []}) => {
   const getTileUrl = (theme) => {
     const cartoDbUrl = 'https://{s}.basemaps.cartocdn.com/{style}/{z}/{x}/{y}.png';
     
-    const style = theme === 'dark'? 'dark_nolabels' : 'light_nolabels';
+    const style = theme === themeDark? 'dark_nolabels' : 'light_nolabels';
     
     return cartoDbUrl.replace('{style}', style);
   };
@@ -84,6 +86,12 @@ const MapContainerBox = ({ stations = []}) => {
 
 const MainPage = () => {
   const { stations, isLoading, error } = useAppState();
+  const dispatch = useAppDispatch();
+
+  const handleCardStationClick = (station, index) => {
+    const selectedStationPayload = { ...station, listId: index };
+    dispatch({ type: 'SELECT_STATION', payload: selectedStationPayload });
+  };
 
   // if (error) {
   //   return <Layout><div className="alert alert-error">{error}</div></Layout>;
@@ -98,7 +106,7 @@ const MainPage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             {/* Map Section */}
             <div className="lg:col-span-2">
               <div className="card border border-base-200 shadow-xl bg-base-100">
@@ -107,7 +115,10 @@ const MainPage = () => {
                     <MapPinned className="w-5 h-5" />
                     <h2 className="card-title text-lg">Map View</h2>
                   </div>
-                  <p className="text-sm text-muted-foreground">Click a marker to view detailed tide data</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Info className="w-4 h-4 text-base-content/50" />
+                    <p className="text-sm text-base-content/50">Click a marker to view detailed tide data</p>
+                  </div>
                 </div>
                 {isLoading ? (
                   <div className="flex justify-center items-center h-[70vh]">
@@ -119,28 +130,39 @@ const MainPage = () => {
               </div>
             </div>
 
-            {/* Active Stations Section */}
-            <div className="flex flex-col gap-4">
-              <h2 className="text-2xl font-semibold">Active Stations</h2>
-              <div className="w-full">
-                <ScrollArea className="h-[70vh] w-full">
-                  <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 w-full pr-4">
-                  {stations.map((station, index) => (
-                    <Link key={station.station_id} to={`/station/${station.label}`}>
-                      <div class="stats shadow border border-base-200 w-full h-32 overflow-hidden">
-                        <div class="stat w-full">
-                          <div className='stat-figure text-secondary'>
-                            <ArrowRight />
+            {/* Recent Readings Section */}
+            <div className="card border border-base-200 shadow-xl bg-base-100 flex flex-col gap-4">
+              <div className="card-body">
+                <div className="flex items-center gap-2 mb-4">
+                  <Waves className="w-5 h-5" />
+                  <h2 className="card-title text-lg">Recent readings</h2>
+                </div>
+                
+                <div className="">
+                  <ScrollArea className="h-[70vh] w-full">
+                    <div className="grid sm:grid-cols-1 min-[120rem]:grid-cols-2 gap-4 w-full pr-4">
+                    {stations.map((station, index) => (
+                      <Link key={station.station_id} to={`/station/${station.label}`} onClick={() => handleCardStationClick(station, index)}>
+                        <div className="stats shadow border border-base-200 w-full overflow-hidden">
+                          <div className="stat">
+
+                            <div className="stat-title">{station.label}</div>
+                            <div className="stat-value text-primary flex items-center">
+                              <div className="grow">
+                                {station.latest_reading.toFixed(1)} m
+                              </div>
+                              <div className='text-secondary'>
+                                <ChevronsRight />
+                              </div>  
+                            </div>
+                            <div className="stat-desc">{moment.utc(station.date_time).format('D MMMM YYYY, hh:mm')}</div>
                           </div>
-                          <div class="stat-title">{station.label}</div>
-                          <div class="stat-value text-primary">{station.latest_reading.toFixed(1)} m</div>
-                          <div class="stat-desc">{moment.utc(station.date_time).format('D MMMM YYYY, hh:mm')}</div>
                         </div>
-                      </div>
-                    </Link>
-                  ))}
-                  </div>
-                </ScrollArea>
+                      </Link>
+                    ))}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
             </div>
           </div>

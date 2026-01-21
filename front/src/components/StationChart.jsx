@@ -1,16 +1,15 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useRef, useImperativeHandle, forwardRef, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAppState, useAppDispatch } from '../context/AppContext';
 import { AlertBox } from '../components/Alert';
 
-import { parse as CParse, formatHex, formatHsl } from 'culori';
+import { parse as CParse, formatRgb, formatHsl } from 'culori';
 
 
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Colors, TimeScale, elements } from 'chart.js';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import 'chartjs-adapter-luxon';
-import { getElementsAtEvent, Line } from 'react-chartjs-2';
-import { tooltip } from 'leaflet';
+import { Line } from 'react-chartjs-2';
 
 
 const hoverHighlight = {
@@ -47,7 +46,7 @@ const hoverHighlight = {
           ctx.arc(x, y, 5, 0, 2 * Math.PI); // Draw circle of radius 10
           
           // Custom styling for the hover marker
-          ctx.fillStyle = _cssVarToHSL("--color-primary-alpha"); // Example: Red semi-transparent fill
+          ctx.fillStyle = _cssVarToHSL("--color-primary-alpha");
           ctx.strokeStyle = _cssVarToHSL("--color-primary-alpha");
           ctx.lineWidth = 1;
           
@@ -62,6 +61,17 @@ const hoverHighlight = {
   }
 };
 
+const customCanvasColor = {
+    id: 'customCanvasBackgroundColor',
+    beforeDraw: (chart, args, options) => {
+      const {ctx} = chart;
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.fillStyle = options.color || '#ffffff';
+      ctx.fillRect(0, 0, chart.width, chart.height);
+      ctx.restore();
+    }
+  };
 
 ChartJS.register(
   CategoryScale,
@@ -83,7 +93,13 @@ export const _cssVarToHSL = (name) => {
   return val;
 }
 
-const StationChart = () => {
+export const _cssVarToRGBA = (name) => {
+  let val = getComputedStyle(document.documentElement).getPropertyValue(name);
+  val = formatRgb(CParse(val))
+  return val;
+}
+
+const StationChart = forwardRef((props, ref) => {
   
   const { selectedStation, dateRange, error, baseUrl } = useAppState();
   const dispatch = useAppDispatch();
@@ -92,7 +108,14 @@ const StationChart = () => {
   const [chartData, setChartData] = useState([]);
   const chartRef = useRef();
 
-  
+  useImperativeHandle(ref, () => ({
+    getChartImage: () => {
+      if (chartRef.current) {
+        return chartRef.current.toBase64Image();
+      }
+      return null;
+    }
+  }));
 
   const data = {
     datasets: [
@@ -124,6 +147,9 @@ const StationChart = () => {
       mode:'nearest',
     },
     plugins: {
+      customCanvasBackgroundColor: {
+        color: _cssVarToRGBA("--color-base-100")
+      },
       legend: {
         position: 'top',
       },
@@ -152,7 +178,50 @@ const StationChart = () => {
     scales: {
       x: {
         type: "time",
-        zone: "utc"
+          
+        time: {
+          displayFormats: {
+            minute: 'dd/LL/yy-HH:mm',
+            hour: 'dd/LL/yy-HH:mm',
+            day: 'dd/LL/yyyy',
+            quarter: 'MMM yyyy'
+          }
+        },
+        zone: "utc",
+        grid: {
+          color: _cssVarToRGBA("--color-base-content")
+        },
+        ticks: {
+          color: _cssVarToRGBA("--color-base-content"),
+          maxRotation: 90,
+          minRotation: 0,
+          maxTicksLimit: 10,
+          font: {
+            size: 11, 
+            family: "Lucida Console, monospace"
+          }
+        },
+      },
+      y: {
+        title: {
+          display: false,
+          text:"Elevation (mAOD)",
+          color: _cssVarToRGBA("--color-base-content"),
+          font: {
+            size: 12, 
+            family: "Lucida Console, monospace"
+          }
+        },
+        grid: {
+          color: _cssVarToRGBA("--color-base-content")
+        },
+        ticks: {
+          color: _cssVarToRGBA("--color-base-content"),
+          font: {
+            size: 14, 
+            family: "Lucida Console, monospace"
+          }
+        }
       }
     }
   };
@@ -218,7 +287,7 @@ const StationChart = () => {
   // --- Render Logic ---
 
   return (
-    <div className="card  p-6 h-[60vh]">
+    <div className="card p-6 h-[40vh]">
       {
         loading 
         ? (
@@ -230,11 +299,11 @@ const StationChart = () => {
         : (!selectedStation) ? (
           <AlertBox type="ERROR" message={"Select a station to view data."} />
         ) : (
-            <Line ref={chartRef} data={data} options={options} plugins={[hoverHighlight]} updateMode='active'/>
+            <Line ref={chartRef} data={data} options={options} plugins={[hoverHighlight, customCanvasColor]} updateMode='active'/>
         )
       }
     </div>
   );
-};
+});
 
 export default StationChart;

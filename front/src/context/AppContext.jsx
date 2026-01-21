@@ -4,9 +4,11 @@ import axios from 'axios';
 
 // --- Initial State and Contexts ---
 const baseUrl = import.meta.env.VITE_API_BASE_URL;
+const themeLight = import.meta.env.VITE_LIGHT_THEME;
+const themeDark = import.meta.env.VITE_DARK_THEME;
 
 const initialState = {
-  appTheme: 'light',
+  appTheme: themeLight,
   isLoading: true,
   baseUrl: baseUrl,
   stations: [], 

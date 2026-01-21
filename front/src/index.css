@@ -1,17 +1,12 @@
 @import "tailwindcss";
+
 @plugin "daisyui" {
-  themes: light --default, dark --prefersdark
+  themes: all
 }
-
-
 
 
 /* @import "leaflet/dist/leaflet.css"; */
 
-.cally {
-  /* This class specifically targets and styles the Cally Web Component */
-  @apply bg-base-100 shadow-xl rounded-box p-4;
-}
 
 
 @keyframes bounce-slow {

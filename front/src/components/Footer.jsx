@@ -8,8 +8,8 @@ const Footer = () => {
           <aside>
             <p className='font-medium'>
               TideNet
-              <span className='font-light mt-0'><br/>uses Environment Agency tide gauge data from the <a href="https://environment.data.gov.uk/flood-monitoring/doc/tidegauge" className='link link-info'>real-time data API (Beta)</a>.
-              <br/>These APIs are provided as open data under the <a href='https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/' className='link link-info'>Open Government Licence</a>.
+              <span className='font-light mt-0'><br/>uses Environment Agency tide gauge data from the <a href="https://environment.data.gov.uk/flood-monitoring/doc/tidegauge" target="_blank" className='link link-info'>real-time data API (Beta)</a>.
+              <br/>These APIs are provided as open data under the <a href='https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/' target="_blank" className='link link-info'>Open Government Licence</a>.
               </span>
               </p>
           </aside>
