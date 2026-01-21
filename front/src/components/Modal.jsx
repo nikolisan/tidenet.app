@@ -18,6 +18,12 @@ return (
           <p className="font-light my-2">
             Astronomical tide predictions provided by this application are generated using the <a href="https://github.com/wesleybowman/UTide" target="_blank" className='link link-info'>UTide</a> Python package. UTide is an open-source library for tidal analysis and prediction.
           </p>
+          <p className="italic my-2">
+            Found a bug? Please report it by raising an <a href="https://github.com/nikolisan/tidenet.app/issues/new?template=bug_report.md" target="_blank" className='link link-info'>issue</a>.
+          </p>
+          <p className="italic my-2">
+            Do you have a feature request? Suggest it <a href="https://github.com/nikolisan/tidenet.app/issues/new?template=feature_request.md" target="_blank" className='link link-info'>here</a>.
+          </p>
           <h4 className="font-semibold m-2 mt-4">Disclaimer</h4>
           <p className="font-light">
             The information provided by this application is for informational purposes only and is not guaranteed to be accurate, complete, or current. The developers and providers expressly disclaim all liability for any errors, omissions, or inaccuracies in the data, and for any actions taken in reliance thereon. By using this application, you acknowledge and accept full responsibility for any consequences resulting from its use, and agree to hold the developers and providers harmless from any claims or damages arising from your use of the information. 
