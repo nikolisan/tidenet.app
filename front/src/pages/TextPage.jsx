@@ -32,7 +32,7 @@ const TextPage = ({text}) => {
             </span>
           </h2>
         )}
-        <ScrollArea className='h-[calc(100vh-20vh)]'>
+        <ScrollArea className='h-[calc(100vh-40vh)] md:h-[calc(100vh-20vh)]'>
           <div className="font-mono mt-4 lg:text-lg" style={{ whiteSpace: 'pre-wrap' }}>
             {body.map((line, index) => {
               // Check if the line starts with a digit (\d)
