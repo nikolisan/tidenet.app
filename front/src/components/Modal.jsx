@@ -23,10 +23,10 @@ return (
             <br/> For full terms and conditions, see the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" className="link link-info">Terms and Conditions</a>
           </p>
           <div className="flex flex-col items-left justify-left mt-6 text-xs text-muted-foreground gap-1">
-            <span>Created by Nikolaos Andreakos under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" className="link link-info">GNU GPLv3 License</a>.</span>
+            <span className="mt-1 text-left">Created by Nikolaos Andreakos under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" className="link link-info">GNU GPLv3 License</a>.</span>
             <span className="mt-1 text-left">
               Contains public sector information licensed under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" className="link link-info">Open Government Licence v3.0</a>.
-            </span>
+            </span>            
           </div>
         </div>
         <form method="dialog" className="modal-backdrop">

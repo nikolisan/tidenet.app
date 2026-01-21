@@ -1,6 +1,6 @@
 import Footer from './Footer';
 import { Link, useLocation  } from "react-router";
-import { Menu, Anchor, MapPin, Home, Info, ChevronsDown, ShieldX } from "lucide-react";
+import { Menu, Anchor, MapPin, Home, Info, ChevronsDown, ShieldX, MonitorCloud, Copyright } from "lucide-react";
 
 import { useAppState, useAppDispatch } from '../context/AppContext';
 
@@ -66,7 +66,7 @@ const Sidebar = ({children}) => {
           </Link>
           <ul className="menu w-full flex-grow">
             <li className="menu-title">Stations</li>
-            <ScrollArea className="h-[calc(100vh-50vh)]">
+            <ScrollArea className="h-[calc(100vh-60vh)] md:h-[calc(100vh-50vh)]">
             {stations.map((station, index) => (
               <li key={station.station_id}  className={`rounded-lg text-lg ${decodeURI(location.pathname) === `/station/${station.label}` ? "menu-active" : ""}`}>
                 <Link to={`/station/${station.label}`} onClick={() => handleMenuClick(station, index)}>
@@ -81,10 +81,18 @@ const Sidebar = ({children}) => {
             </div>
           </ul>
           <div className="border-t border-base-300 mb-10">
-            <button className="btn w-full justify-start font-normal btn-ghost" onClick={()=>document.getElementById('my_modal_5').showModal()}>
+            <Link className="btn w-full justify-start font-normal btn-ghost" to='/third-party'>
+              <MonitorCloud className="mr-2 h-4 w-4" />
+              3rd Party Software
+            </Link>
+            <Link className="btn w-full justify-start font-normal btn-ghost" to='/tos'>
               <ShieldX className="mr-2 h-4 w-4" />
-              Terms of use
-            </button>
+              Terms of Service
+            </Link>
+            <Link className="btn w-full justify-start font-normal btn-ghost" to='/license'>
+              <Copyright className="mr-2 h-4 w-4" />
+              MIT License
+            </Link>
             <button className="btn w-full justify-start font-normal btn-ghost" onClick={()=>document.getElementById('my_modal_5').showModal()}>
               <Info className="mr-2 h-4 w-4" />
               About
