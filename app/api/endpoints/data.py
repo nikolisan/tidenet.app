@@ -13,7 +13,6 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.get("/fetch")
 def fetch_readings_for_station(station_label:str, request: Request, start_date: Optional[str]=None, end_date: Optional[str]=None) -> List[Reading]:
     today = pendulum.now().in_timezone("UTC")
     start: pendulum.DateTime = pendulum.parse(start_date).in_timezone("UTC") if start_date else today.subtract(weeks=2) # type: ignore
