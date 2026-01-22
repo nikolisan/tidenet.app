@@ -101,7 +101,7 @@ const StationPage = () => {
                       <span>Latest Reading</span>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <p className='text-3xl font-semibold font-mono text-primary'>{selectedStation?.latest_reading > 0 ? '+' : ''}{selectedStation?.latest_reading?.toFixed(2)} m</p>
+                      <p className='text-3xl font-semibold font-mono text-primary'>{selectedStation?.latest_reading > 0 ? '+' : ''}{selectedStation?.latest_reading?.toFixed(2)} mAOD</p>
                       <p className='text-md text-base-content/50'>{DateTime.fromISO(selectedStation.date_time).toUTC().toFormat('dd MMM yyyy \'at\' HH:mm \'UTC\'')}</p>
                     </div>
                   </div>
@@ -114,8 +114,9 @@ const StationPage = () => {
                       <span>Surge Residual</span>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <p className={`text-3xl font-semibold font-mono ${selectedStation.latest_reading < 0 ? 'text-error' : 'text-success'}`}>{selectedStation?.latest_reading > 0 ? '+' : ''}{selectedStation?.latest_reading?.toFixed(2)} m</p>
-                      <p className='text-md text-base-content/50'>{DateTime.fromISO(selectedStation.date_time).toUTC().toFormat('dd MMM yyyy \'at\' HH:mm \'UTC\'')}</p>
+                      <p className="text-3xl font-semibold font-mono text-error">-- m</p>
+                      {/* <p className={`text-3xl font-semibold font-mono ${selectedStation.latest_reading < 0 ? 'text-error' : 'text-success'}`}>{selectedStation?.latest_reading > 0 ? '+' : ''}-- m</p> */}
+                      <p className='text-md text-base-content/50'>Still under development</p>
                     </div>
                   </div>
                 </div>
