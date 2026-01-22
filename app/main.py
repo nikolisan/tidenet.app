@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from app.db import create_db_engine
 from .api import api
+from app.dependencies.redis import redis
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,6 +36,10 @@ async def lifespan(app: FastAPI):
         print("Disposing SQLAlchemy Engine...")
         engine.dispose()
         print("Engine disposed.")
+    # Redis shutdown
+    print("Closing Redis connection...")
+    await redis.close()
+    print("Redis connection closed.")
 
 
 app = FastAPI(title="FastAPI", lifespan=lifespan)
@@ -46,5 +51,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 app.include_router(api.router)
