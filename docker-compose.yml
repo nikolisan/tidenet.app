@@ -10,6 +10,7 @@ services:
     networks:
       - appnet
     restart: unless-stopped
+    # If we need to expose the api to outer world
     # ports:
     #   - "8000:8000"
 
@@ -28,6 +29,19 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+  
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    networks:
+      - appnet
 
   redis:
     image: redis:7.2-alpine
@@ -36,19 +50,6 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"  # Exposes Redis for backend use (not for public access)
-
-  # reverseproxy:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.reverseproxy
-  #   depends_on:
-  #     - backend
-  #     - frontend
-  #   networks:
-  #     - appnet
-  #   restart: unless-stopped
-  #   ports:
-  #     - "80:80"  # Exposes nginx on port 80 for all web traffic
 
 networks:
   appnet:

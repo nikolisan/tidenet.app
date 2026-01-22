@@ -42,7 +42,10 @@ async def lifespan(app: FastAPI):
     print("Redis connection closed.")
 
 
-app = FastAPI(title="FastAPI", lifespan=lifespan)
+app = FastAPI(
+        title="FastAPI",
+        lifespan=lifespan,
+)
 
 # CORS setup (allows frontend to access the API)
 app.add_middleware(
@@ -52,5 +55,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+print("====> !!!!!! BACKEND STARTED new")
 
 app.include_router(api.router)
