@@ -109,7 +109,7 @@ const StationChart = forwardRef((props, ref) => {
   const endDate = dateRange.end;
 
   const fetchChartData = async () => {
-    let apiUrl = `${baseUrl}/api/data/${selectedStation.label}`;
+    let apiUrl = `${baseUrl}/data/${selectedStation.label}`;
     if (startDate && endDate) {
       apiUrl += `?start_date=${startDate}&end_date=${endDate}`;
     }

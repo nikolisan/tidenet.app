@@ -50,7 +50,7 @@ export const AppProvider = ({ children }) => {
   // Initial data fetch for all stations on application load
   
   const fetchStations = async () => {
-    let apiUrl = `${state.baseUrl}/api/stations`;
+    let apiUrl = `${state.baseUrl}/stations`;
     const response = await axios.get(apiUrl);
     return Object.values(response.data);
   }

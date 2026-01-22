@@ -25,6 +25,7 @@ dependencies = [
     "ruptures (>=1.1.10,<2.0.0)",
     "scikit-learn (>=1.7.2,<2.0.0)",
     "redis (>=7.1.0,<8.0.0)",
+    "gunicorn (>=23.0.0,<24.0.0)",
 ]
 
 [tool.poetry]
