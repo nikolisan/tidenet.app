@@ -8,10 +8,11 @@ import DatePicker from '../components/DatePicker';
 import Breadcrumb from '../components/Breadcrumb';
 
 import { MapPin, ChevronsUpDown , Gauge, Droplets, Info, ImageDown} from 'lucide-react'
+import { AlertBox } from '../components/Alert';
 
 
 const StationPage = () => {
-  const { stations, selectedStation, isLoading, dateRange } = useAppState();
+  const { stations, selectedStation, isLoading, dateRange, error } = useAppState();
 
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -60,6 +61,14 @@ const StationPage = () => {
                 <span className="loading loading-spinner loading-lg"></span>
             </div>
         </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <AlertBox type="ERROR" message={error?.response?.data?.detail || error.message || String(error)} />
+      </Layout>
     );
   }
 

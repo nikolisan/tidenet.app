@@ -10,6 +10,7 @@ import { Waves, MapPinned, Info, ChevronsRight  } from 'lucide-react';
 import { MapContainer, TileLayer, useMap, Marker, Popup, Tooltip } from 'react-leaflet'
 import L from 'leaflet';
 import ScrollArea from '../components/ScrollArea';
+import { AlertBox } from '../components/Alert';
 
 const themeDark = import.meta.env.VITE_DARK_THEME;
 
@@ -93,9 +94,7 @@ const MainPage = () => {
     dispatch({ type: 'SELECT_STATION', payload: selectedStationPayload });
   };
 
-  // if (error) {
-  //   return <Layout><div className="alert alert-error">{error}</div></Layout>;
-  // }
+
   return (
     <Layout>
         <div className="flex flex-col gap-8">
@@ -105,6 +104,7 @@ const MainPage = () => {
                 near real-time tide and surge readings
             </p>
           </div>
+
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             {/* Map Section */}
@@ -124,9 +124,13 @@ const MainPage = () => {
                   <div className="flex justify-center items-center h-[70vh]">
                     <span className="loading loading-spinner loading-lg"></span>
                   </div>
-                ) : (
+                ) : !error ? (
                   <MapContainerBox stations={stations} />
-                )}
+                ) : 
+                  <div className="m-4">
+                    <AlertBox type="ERROR" message={error?.response?.data?.detail || error.message || String(error)} />
+                  </div>
+                }
               </div>
             </div>
 

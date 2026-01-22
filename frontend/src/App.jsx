@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import NotFoundPage from './pages/NotFoundPage';
 import { AppProvider } from './context/AppContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -30,6 +31,7 @@ const App = () => {
             <Route path="/toc" element={<TextPage text={tocText} />} />
             <Route path="/license" element={<TextPage text={licenseText} />} />
             <Route path="/third-party" element={<TextPage text={softwareText} />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Router>
       </AppProvider>

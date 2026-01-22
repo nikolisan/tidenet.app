@@ -102,12 +102,7 @@ export const _cssVarToRGBA = (name) => {
 
 const StationChart = forwardRef((props, ref) => {
   
-  // const { selectedStation, dateRange, error, baseUrl } = useAppState();
   const { selectedStation, dateRange, baseUrl } = useAppState();
-  const dispatch = useAppDispatch();
-  // local state
-  // const [loading, setLoading] = useState(false);
-  // const [chartData, setChartData] = useState([]);
   const chartRef = useRef();
 
   const startDate = dateRange.start;
@@ -269,7 +264,7 @@ const StationChart = forwardRef((props, ref) => {
           <div className="skeleton bg-base-200 text-center p-10 h-[60vh]" />
         ) 
         : error ? (
-          <AlertBox type="ERROR" message={error.message} />
+          <AlertBox type="ERROR" message={error?.response?.data?.detail || error.message || String(error)} />
           // <AlertBox type="ERROR" message={error} />
         )
         : (!selectedStation) ? (
