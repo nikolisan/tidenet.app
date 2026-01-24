@@ -1,0 +1,46 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    env_file:
+      - .env  # Loads backend environment variables (RDS, Redis, secrets) from .env file in project root
+    depends_on:
+      - redis
+    networks:
+      - appnet
+    restart: unless-stopped
+    # If we need to expose the api to outer world
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - VITE_API_BASE_URL  # Passes API base URL to Vite at build time
+        - VITE_LIGHT_THEME
+        - VITE_DARK_THEME
+    env_file:
+      - ./frontend/.env  # Loads frontend environment variables (e.g., VITE_API_BASE_URL) from frontend/.env
+    networks:
+      - appnet
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx_dev.conf:/etc/nginx/nginx.conf:ro
+  
+
+  redis:
+    image: redis:7.2-alpine
+    networks:
+      - appnet
+    restart: unless-stopped
+    ports:
+      - "6379:6379"  # Exposes Redis for backend use (not for public access)
+
+networks:
+  appnet:
+    driver: bridge
