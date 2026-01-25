@@ -29,7 +29,7 @@ async def fetch_readings_for_station(station_label:str, request: Request, start_
     print(f"[DEBUG] /data/{station_label}: Making a new request for {start_date} to {end_date}")
     
     today: pendulum.DateTime = pendulum.now().in_timezone("UTC")
-    start: pendulum.DateTime = cast(pendulum.parse(start_date)).in_timezone("UTC") if start_date else today.subtract(weeks=2) # type: ignore
+    start: pendulum.DateTime = cast(pendulum.DateTime, pendulum.parse(start_date)).in_timezone("UTC") if start_date else today.subtract(weeks=2)
     
     if end_date in ("today", None):
         end: pendulum.DateTime = today
@@ -127,12 +127,11 @@ async def get_readings_data(
     # If we don't have the key check if it belongs to a superset
     superset_key: Optional[str] = None
     # Retrieve all redis keys for the station
-    keys: List[bytes] = await redis.keys(f"readings:{station_label}:*")
+    keys: List[str] = await redis.keys(f"readings:{station_label}:*")
     # Example: readings:Lowestoft:2025-04-30T23:04:00.000Z:2025-05-03T23:04:00.000Z
     cache_key_regex: re.Pattern[str] = re.compile(rf"^readings:{re.escape(station_label)}:(.+?[A-Z]):(.+[A-Z])$")
     
-    for byte_key in keys:
-        key: str = byte_key.decode("utf-8")
+    for key in keys:
         match: Optional[re.Match[str]]= cache_key_regex.match(key)
         
         if match:
