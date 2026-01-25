@@ -102,6 +102,7 @@ async def get_readings_data(
     print("----------------------------")
     print(station_label)
     print(start_date, " ", end_date)
+    print(request.url)
     print("----------------------------")
     
     # --- Redis Caching ---

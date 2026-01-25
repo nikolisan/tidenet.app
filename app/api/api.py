@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from .endpoints import stations, data
+
+from .endpoints import stations, data, testing
 
 router = APIRouter(
     prefix="/api",
@@ -9,3 +10,4 @@ router = APIRouter(
 
 router.include_router(stations.router)
 router.include_router(data.router)
+router.include_router(testing.router)
