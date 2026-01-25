@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
         
-        print("SQLAlchemy Synchronous Engine initialized successfully.")
+        print("SQLAlchemy Engine initialized successfully.")
         
     except Exception as e:
         print(f"CRITICAL ERROR: Failed to initialize SQLAlchemy engine. Check DATABASE_URL and driver. Details: {e}")
