@@ -1,23 +1,22 @@
 # Required for redis
-from fastapi import Depends
-from app.dependencies.redis import get_redis
 import json
-
-from dotenv import load_dotenv
 import os
+import re
+import pendulum
+from typing import List, Optional, Sequence, Dict, Any, Union, cast
 
-load_dotenv()
-CACHE_TIME_LIMIT = int(os.getenv("CACHE_TIME_LIMIT", 3600))
-
-from fastapi import HTTPException, APIRouter, Request
+from fastapi import Depends, HTTPException, APIRouter, Request
 from pydantic import ValidationError
 from sqlalchemy import text, CursorResult
 from sqlalchemy.engine import RowMapping
-from typing import List, Optional, Sequence
-import pendulum
-import re
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncConnection
+from dotenv import load_dotenv
 
+from app.dependencies.redis import get_redis
 from app.models import Reading, StationDataResponse
+
+load_dotenv()
+CACHE_TIME_LIMIT:int = int(os.getenv("CACHE_TIME_LIMIT", 3600))
 
 router = APIRouter(
     prefix="/data",
@@ -25,28 +24,29 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-def fetch_readings_for_station(station_label:str, request: Request, start_date: Optional[str]=None, end_date: Optional[str]=None) -> List[Reading]:
+async def fetch_readings_for_station(station_label:str, request: Request, start_date: Optional[str]=None, end_date: Optional[str]=None) -> List[Reading]:
     
     print(f"[DEBUG] /data/{station_label}: Making a new request for {start_date} to {end_date}")
     
-    today = pendulum.now().in_timezone("UTC")
-    start: pendulum.DateTime = pendulum.parse(start_date).in_timezone("UTC") if start_date else today.subtract(weeks=2) # type: ignore
+    today: pendulum.DateTime = pendulum.now().in_timezone("UTC")
+    start: pendulum.DateTime = cast(pendulum.parse(start_date)).in_timezone("UTC") if start_date else today.subtract(weeks=2) # type: ignore
     
-    if end_date == "today" or end_date == None:
+    if end_date in ("today", None):
         end: pendulum.DateTime = today
     else:
         end: pendulum.DateTime = pendulum.parse(end_date).in_timezone("UTC") # type: ignore
 
-    max_range = end.subtract(months=6)
+    max_range: pendulum.DateTime = end.subtract(months=6)
     if start < max_range:
         start = max_range
         
     try:
-    # FastAPI executes the synchronous fetch_station_labels_from_db in a thread pool.
-        engine = getattr(request.app.state, "db_engine", None)
+        # Retrieve the db_engine stored in the state of the app associated with this request
+        engine: Optional[AsyncEngine] = getattr(request.app.state, "db_engine", None)
         if engine is None:
-            raise ConnectionError("SQLAlchemy Engine is unavailable.")
-        query = """
+            raise HTTPException(status_code=503, detail="Database engine unavailable")
+        
+        query: str = """
             SELECT 
                 r.date_time AT TIME ZONE 'UTC' AS date_time, 
                 r.value, 
@@ -58,8 +58,10 @@ def fetch_readings_for_station(station_label:str, request: Request, start_date: 
                 AND r.date_time BETWEEN :start_date AND :end_date
             ORDER BY r.date_time ASC;
         """       
-        with engine.connect() as conn:
-            result: CursorResult = conn.execute(
+        async with engine.connect() as conn:
+            conn: AsyncConnection
+            
+            result: CursorResult = await conn.execute(
                 text(query),
                 {
                     "station_label": station_label,
@@ -69,7 +71,7 @@ def fetch_readings_for_station(station_label:str, request: Request, start_date: 
             )
             rows: Sequence[RowMapping] = result.mappings().all()
                 
-            readings = [
+            readings: List[Reading] = [
                 Reading(
                     date_time=row["date_time"],
                     value=row["value"],
@@ -78,16 +80,11 @@ def fetch_readings_for_station(station_label:str, request: Request, start_date: 
                 )
                 for row in rows
             ]
-                
         return readings
             
-        
-    except ConnectionError as e:
-        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        print(f"Error fetching stations", e)
+        print(f"Error fetching stations: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error during data retrieval.")
-
 
 
 
@@ -98,7 +95,7 @@ async def get_readings_data(
     start_date: Optional[str]=None,
     end_date: Optional[str]=None,
     redis=Depends(get_redis)
-):
+) -> Union[StationDataResponse, Dict[str, Any]]:
     """
     Endpoint that calls the synchronous DB function to get time-series data.
     """
@@ -109,18 +106,18 @@ async def get_readings_data(
     
     # --- Redis Caching ---
     # Parse requested range
-    requested_start = None # type: ignore
-    requested_end = None # type: ignore
-    if start_date:
-        requested_start: pendulum.DateTime = pendulum.parse(start_date) # type: ignore
-    if end_date:
-        requested_end: pendulum.DateTime = pendulum.parse(end_date) # type: ignore
+    requested_start: Optional[pendulum.DateTime] = None
+    requested_end: Optional[pendulum.DateTime] = None
+    
+    if start_date and end_date :
+        requested_start = cast(pendulum.DateTime, pendulum.parse(start_date))
+        requested_end = cast(pendulum.DateTime, pendulum.parse(end_date))
 
-    if requested_start >= requested_end:
-        raise HTTPException(status_code=404, detail=f"End date must be greater than the Start date.")
+        if requested_start >= requested_end:
+            raise HTTPException(status_code=404, detail=f"End date must be greater than the Start date.")
     
     cache_key: str = f"readings:{station_label}:{start_date}:{end_date}"
-    cached_data = await redis.get(cache_key)
+    cached_data: Optional[bytes] = await redis.get(cache_key)
     
     # If we have the exact key then brilliant => return it
     if cached_data:
@@ -128,18 +125,22 @@ async def get_readings_data(
         return json.loads(cached_data)
 
     # If we don't have the key check if it belongs to a superset
-    superset_key = None
+    superset_key: Optional[str] = None
     # Retrieve all redis keys for the station
-    keys = await redis.keys(f"readings:{station_label}:*")
+    keys: List[bytes] = await redis.keys(f"readings:{station_label}:*")
     # Example: readings:Lowestoft:2025-04-30T23:04:00.000Z:2025-05-03T23:04:00.000Z
     cache_key_regex: re.Pattern[str] = re.compile(rf"^readings:{re.escape(station_label)}:(.+?[A-Z]):(.+[A-Z])$")
-    for key in keys:
-        match = cache_key_regex.match(key)
+    
+    for byte_key in keys:
+        key: str = byte_key.decode("utf-8")
+        match: Optional[re.Match[str]]= cache_key_regex.match(key)
+        
         if match:
             cached_start_str, cached_end_str = match.groups()
             try:
-                cached_start = pendulum.parse(cached_start_str)
-                cached_end = pendulum.parse(cached_end_str)
+                cached_start: pendulum.DateTime = cast(pendulum.DateTime, pendulum.parse(cached_start_str))
+                cached_end: pendulum.DateTime = cast(pendulum.DateTime, pendulum.parse(cached_end_str))
+                
             except Exception as e:
                 print(f"[ERROR] Key: {key}")
                 print(f"[ERROR] Extracted: start={cached_start_str}, end={cached_end_str}")
@@ -150,34 +151,38 @@ async def get_readings_data(
                 if cached_start <= requested_start and cached_end >= requested_end: # type: ignore
                     superset_key = key
                     break
-    # If superset found, load and filter in next step
+                
+    # If superset found, load and filter them
     if superset_key:
         print(f"Superset cache found: {superset_key}")
-        superset_data = await redis.get(superset_key)
-        superset_json = json.loads(superset_data)
+        superset_data= await redis.get(superset_key)
+        superset_json: Dict[str, Any] = json.loads(superset_data)
+        
         # Filter date_time and values arrays to requested range
-        filtered_date_times = []
-        filtered_values = []
+        filtered_date_times: List[str] = []
+        filtered_values: List[str] = []
+        
         for dt_str, value in zip(superset_json["date_time"], superset_json["values"]):
-            dt = pendulum.parse(dt_str)
+            dt: pendulum.DateTime = cast(pendulum.DateTime, pendulum.parse(dt_str))
             if requested_start <= dt <= requested_end: # type: ignore
                 filtered_date_times.append(dt_str)
                 filtered_values.append(value)
+                
         # Build filtered response
-        filtered_response = {
+        filtered_response: Dict[str, Any] = {
             "station_id": superset_json["station_id"],
             "station_label": superset_json["station_label"],
             "date_time": filtered_date_times,
             "values": filtered_values,
             "unit": superset_json.get("unit", "mAOD")
         }
+        
         print("[DEBUG] Served filtered superset from REDIS")
         return filtered_response
 
     
     try:
-        # FastAPI executes the synchronous fetch_readings_for_station in a thread pool.
-        readings = fetch_readings_for_station(station_label, request, start_date=start_date, end_date=end_date)
+        readings: List[Reading] = await fetch_readings_for_station(station_label, request, start_date=start_date, end_date=end_date)
     except ConnectionError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
@@ -195,7 +200,7 @@ async def get_readings_data(
     
     # more than 1 station return => throw error
     if not len(set(station_id)) == 1:
-        raise HTTPException(status_code=500, detail="Internal Server Error during data retrieval.")
+        raise HTTPException(status_code=500, detail="Data integrity error: multiple station IDs found.")
 
     # Pydantic serialization and validation
     try:

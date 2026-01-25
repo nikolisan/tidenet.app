@@ -1,15 +1,19 @@
-from fastapi import HTTPException, APIRouter, Request, Depends
-from app.dependencies.redis import get_redis
-import json
-from dotenv import load_dotenv
 import os
+import json
+
+from typing import Dict, Any, Optional
+from sqlalchemy.engine.row import RowMapping
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncConnection
+from sqlalchemy import text, CursorResult, MappingResult
+
+from fastapi import HTTPException, APIRouter, Request, Depends
+from dotenv import load_dotenv
+from app.dependencies.redis import get_redis
+from app.models import Station
 
 load_dotenv()
 CACHE_TIME_LIMIT = int(os.getenv("CACHE_TIME_LIMIT", 3600))
 
-from sqlalchemy import text, CursorResult
-
-from app.models import Station
 
 router = APIRouter(
     prefix="/stations",
@@ -19,25 +23,27 @@ router = APIRouter(
 
 
 @router.get("/")
-async def get_stations(request: Request, redis=Depends(get_redis)) -> dict:
+async def get_stations(request: Request, redis=Depends(get_redis)) -> Dict[str, Any]:
     """
-    Endpoint that calls the synchronous DB function. FastAPI automatically handles 
-    thread pooling for the blocking operation.
+    Function to list all stations along with their metadata and latest readings
     """
     # --- Redis Caching ---
+    # Search for a cached data in redis
     cache_key = "stations:all"
-    cached = await redis.get(cache_key)
+    cached: Optional[bytes] = await redis.get(cache_key)
     if cached:
         # Return cached station dict
         print(" ===> Loaded the stations from REDIS")
         return json.loads(cached)
 
     try:
-        # FastAPI executes the synchronous fetch_station_labels_from_db in a thread pool.
-        engine = getattr(request.app.state, "db_engine", None)
+        # Retrieve the db_engine stored in the state of the app associated with this request
+        engine: Optional[AsyncEngine] = getattr(request.app.state, "db_engine", None)
+        
         if engine is None:
-            raise ConnectionError("SQLAlchemy Engine is unavailable.")
-        query = """
+            raise HTTPException(status_code=503, detail="Database engine unavailable")
+        
+        query: str = """
             SELECT DISTINCT ON (s.station_id)
                 s.label,
                 s.station_id,
@@ -52,22 +58,31 @@ async def get_stations(request: Request, redis=Depends(get_redis)) -> dict:
                 r.date_time DESC,
                 s.label ASC;
         """
-        with engine.connect() as conn:
-            stations = {}
-            result: CursorResult = conn.execute(text(query))
-            for row in result:
+        
+        async with engine.connect() as conn:
+            conn:AsyncConnection
+            
+            stations:Dict[str, Any] = {}
+            result: CursorResult = await conn.execute(text(query))
+            rows: MappingResult = result.mappings()
+            
+            
+            
+            for row in rows:
+                row: RowMapping
                 # Convert datetime fields to ISO strings for JSON serialization
-                stations[row[0]] = Station(
-                    label=row[0],
-                    station_id=row[1],
-                    date_time=row[2].isoformat(),
-                    latest_reading=row[3],
-                    lat=row[4],
-                    lon=row[5]
+                station_obj = Station(
+                    label=row["label"],
+                    station_id=row["station_id"],
+                    date_time=row["latest_reading"].isoformat(),
+                    latest_reading=row["value"],
+                    lat=row["lat"],
+                    lon=row["long"]
                 )
+                stations[str(row["label"])] = station_obj.model_dump()
+                
         # Cache the stations dict as JSON
-        stations_serializable = {k: v.dict() for k, v in stations.items()}
-        await redis.set(cache_key, json.dumps(stations_serializable), ex=CACHE_TIME_LIMIT)    
+        await redis.set(cache_key, json.dumps(stations), ex=CACHE_TIME_LIMIT)    
         return stations
     
     except ConnectionError as e:
