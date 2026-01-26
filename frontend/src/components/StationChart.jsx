@@ -1,92 +1,11 @@
 import { useRef, useImperativeHandle, forwardRef } from 'react';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
-import { useAppState, useAppDispatch } from '../context/AppContext';
+import ReactECharts from 'echarts-for-react';
+import { useAppState } from '../context/AppContext';
 import { AlertBox } from '../components/Alert';
-
 import { parse as CParse, formatRgb, formatHsl } from 'culori';
-
-
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Colors, TimeScale, elements } from 'chart.js';
-import zoomPlugin from 'chartjs-plugin-zoom';
-import 'chartjs-adapter-luxon';
-import { Line } from 'react-chartjs-2';
-
-
-const hoverHighlight = {
-  id: 'hoverHighlight',
-  // Draw the custom highlight *after* Chart.js has drawn the main elements
-  afterDatasetDraw: (chart, args, options) => {
-    // Check if Chart.js has any active elements (i.e., data points being hovered)
-    const tooltip = chart.tooltip;
-
-    if (tooltip && tooltip.getActiveElements()) {
-      const activeElements = tooltip.getActiveElements();
-    // const activeElements = chart.tooltip.getActiveElements();
-
-      
-      if (activeElements.length === 0) {
-        return; // Stop if nothing is hovered
-      }
-
-      const ctx = chart.ctx;
-      ctx.save(); // Save the current canvas state
-
-      // Loop through all currently hovered elements
-      activeElements.forEach(element => {
-        const datasetIndex = element.datasetIndex;
-        const index = element.index;
-        
-        // Get the point element (e.g., Circle element for a line/scatter chart)
-        const pointElement = chart.getDatasetMeta(datasetIndex).data[index];
-        
-        if (pointElement) {
-          const { x, y } = pointElement.tooltipPosition(); // Get point center coordinates
-          
-          ctx.beginPath();
-          ctx.arc(x, y, 5, 0, 2 * Math.PI); // Draw circle of radius 10
-          
-          // Custom styling for the hover marker
-          ctx.fillStyle = _cssVarToHSL("--color-primary-alpha");
-          ctx.strokeStyle = _cssVarToHSL("--color-primary-alpha");
-          ctx.lineWidth = 1;
-          
-          ctx.fill();
-          ctx.stroke();
-          ctx.closePath();
-        }
-      });
-
-      ctx.restore(); // Restore the canvas state
-    }
-  }
-};
-
-const customCanvasColor = {
-    id: 'customCanvasBackgroundColor',
-    beforeDraw: (chart, args, options) => {
-      const {ctx} = chart;
-      ctx.save();
-      ctx.globalCompositeOperation = 'destination-over';
-      ctx.fillStyle = options.color || '#ffffff';
-      ctx.fillRect(0, 0, chart.width, chart.height);
-      ctx.restore();
-    }
-  };
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  TimeScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Colors,
-  zoomPlugin,
-  hoverHighlight
-);
+// import { _cssVarToRGBA, _cssVarToHSL } from '../utils/colorHelpers'; // Ensure these are accessible
 
 export const _cssVarToHSL = (name) => {
   let val = getComputedStyle(document.documentElement).getPropertyValue(name);
@@ -100,179 +19,115 @@ export const _cssVarToRGBA = (name) => {
   return val;
 }
 
-const StationChart = forwardRef((props, ref) => {
-  
-  const { selectedStation, dateRange, baseUrl } = useAppState();
-  const chartRef = useRef();
 
-  const startDate = dateRange.start;
-  const endDate = dateRange.end;
+const StationChart = forwardRef((props, ref) => {
+  const { selectedStation, dateRange, baseUrl } = useAppState();
+  const echartsRef = useRef(null);
 
   const fetchChartData = async () => {
     let apiUrl = `${baseUrl}/data/${selectedStation.label}`;
-    if (startDate && endDate) {
-      apiUrl += `?start_date=${startDate}&end_date=${endDate}`;
+    if (dateRange.start && dateRange.end) {
+      apiUrl += `?start_date=${dateRange.start}&end_date=${dateRange.end}`;
     }
     const response = await axios.get(apiUrl);
     const rawData = response.data;
-    const transformedData = [];
-    if (rawData.date_time && rawData.values && rawData.date_time.length === rawData.values.length) {
-      for (let i = 0; i < rawData.date_time.length; i++) {
-        transformedData.push({
-          date_time: rawData.date_time[i],
-          elevation: rawData.values[i], 
-        });
-      }
+
+    // DATA TRANSFORMATION: 
+    // Converting your API's split arrays into ECharts [x, y] coordinates
+    if (rawData.date_time && rawData.values) {
+      return rawData.date_time.map((dt, i) => [dt, rawData.values[i]]);
     }
-    else {
-      throw new Error('Received malformed data. Please try again.');
-    }
-    return transformedData;
+    throw new Error('Malformed data received from API');
   };
 
   const { data: chartData = [], isLoading, error } = useQuery({
-    queryKey: ['chartData', selectedStation?.label, startDate, endDate],
+    queryKey: ['chartData', selectedStation?.label, dateRange.start, dateRange.end],
     queryFn: fetchChartData,
-    enabled: !!selectedStation, // Only run if a station is selected
+    enabled: !!selectedStation,
   });
 
+  // Expose Chart functionality to parent
   useImperativeHandle(ref, () => ({
     getChartImage: () => {
-      if (chartRef.current) {
-        return chartRef.current.toBase64Image();
-      }
-      return null;
+      const chartInstance = echartsRef.current?.getEchartsInstance();
+      return chartInstance ? chartInstance.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' }) : null;
     }
   }));
 
-  const data = {
-    datasets: [
-      {
-        label: 'Water Level',
-        data: chartData,
-        borderColor: `${_cssVarToHSL('--color-primary')}`,
-        backgroundColor:  `${_cssVarToHSL('--color-primary')}`,
-        pointStyle: false,
-        parsing: {
-          xAxisKey: 'date_time',
-          yAxisKey: 'elevation',
-        },
-      },
-    ],
-  };
-
   const options = {
-    responsive: true,
-    maintainAspectRatio: false ,
-    type: 'line',
-    layout: {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'line' }
     },
-    tension: 0.5,
-    interaction: {
-      mode: 'nearest'
+    grid: {
+      top: '10%',
+      left: '5%',
+      right: '5%',
+      bottom: '15%',
+      containLabel: true
     },
-    hover: {
-      mode:'nearest',
+    xAxis: {
+      type: 'time',
+      axisLine: { lineStyle: { color: _cssVarToRGBA("--color-base-content") } },
+      axisLabel: { color: _cssVarToRGBA("--color-base-content"), fontSize: 11 },
+      splitLine: { show: false }
     },
-    plugins: {
-      customCanvasBackgroundColor: {
-        color: _cssVarToRGBA("--color-base-100")
-      },
-      legend: {
-        position: 'top',
-      },
-      tooltip: {
-        enable: true,
-        intersect: false,
-        position: 'nearest'
-
-      },
-      zoom: {
-        pan: {
-          enabled: true,
-          mode: 'x'
-        },
-        zoom: {
-          wheel: {
-            enabled: true
-          },
-          pinch: {
-            enabled: true
-          },
-          mode: 'x'
-        }
-      },
+    yAxis: {
+      type: 'value',
+      axisLine: { lineStyle: { color: _cssVarToRGBA("--color-base-content") } },
+      axisLabel: { color: _cssVarToRGBA("--color-base-content") },
+      // splitLine: { show: false }
+      splitLine: { lineStyle: { color: _cssVarToRGBA("--color-base-300") } }
     },
-    scales: {
-      x: {
-        type: "time",
-          
-        time: {
-          displayFormats: {
-            minute: 'dd/LL/yy-HH:mm',
-            hour: 'dd/LL/yy-HH:mm',
-            day: 'dd/LL/yyyy',
-            quarter: 'MMM yyyy'
-          }
-        },
-        zone: "utc",
-        grid: {
-          color: _cssVarToRGBA("--color-base-content")
-        },
-        ticks: {
-          color: _cssVarToRGBA("--color-base-content"),
-          maxRotation: 90,
-          minRotation: 0,
-          maxTicksLimit: 10,
-          font: {
-            size: 11, 
-            family: "Lucida Console, monospace"
-          }
-        },
+    // Zoom & Pan
+    dataZoom: [
+      {
+        type: 'inside', // Enables mouse-wheel zoom and drag-pan
+        xAxisIndex: 0,
+        filterMode: 'none'
       },
-      y: {
-        title: {
-          display: false,
-          text:"Elevation (mAOD)",
-          color: _cssVarToRGBA("--color-base-content"),
-          font: {
-            size: 12, 
-            family: "Lucida Console, monospace"
-          }
-        },
-        grid: {
-          color: _cssVarToRGBA("--color-base-content")
-        },
-        ticks: {
-          color: _cssVarToRGBA("--color-base-content"),
-          font: {
-            size: 14, 
-            family: "Lucida Console, monospace"
-          }
-        }
+      {
+        type: 'slider', // Visual bar at the bottom
+        xAxisIndex: 0,
+        bottom: 10,
+        height: 20,
+        borderColor: 'transparent',
+        fillerColor: _cssVarToRGBA("--color-primary-alpha"),
+        handleStyle: { color: _cssVarToRGBA("--color-primary") }
       }
-    }
+    ],
+    series: [
+      {
+        name: 'Water Level',
+        type: 'line',
+        data: chartData,
+        showSymbol: false, 
+        sampling: 'lttb', // Preserves peaks/lows while keeping 5k points smooth
+        lineStyle: { width: 2, color: _cssVarToHSL('--color-primary') },
+        // areaStyle: {
+        //   color: _cssVarToRGBA("--color-primary-alpha")
+        // }
+      }
+    ]
   };
 
-  
   return (
-    <div className="card p-6 h-[40vh]">
-      {
-        // loading
-        isLoading 
-        ? (
-          <div className="skeleton bg-base-200 text-center p-10 h-[60vh]" />
-        ) 
-        : error ? (
-          <AlertBox type="ERROR" message={error?.response?.data?.detail || error.message || String(error)} />
-          // <AlertBox type="ERROR" message={error} />
-        )
-        : (!selectedStation) ? (
-          <AlertBox type="ERROR" message={"Select a station to view data."} />
-        ) : (
-            <Line ref={chartRef} data={data} options={options} plugins={[hoverHighlight, customCanvasColor]} updateMode='active'/>
-        )
-      }
+    <div className="card p-6 h-[40vh] w-full">
+      {isLoading ? (
+        <div className="skeleton bg-base-200 h-full w-full" />
+      ) : error ? (
+        <AlertBox type="ERROR" message={error.message} />
+      ) : !selectedStation ? (
+        <AlertBox type="INFO" message="Select a station to view data." />
+      ) : (
+        <ReactECharts
+          ref={echartsRef}
+          option={options}
+          style={{ height: '100%', width: '100%' }}
+          notMerge={true}
+          />
+      )}
     </div>
   );
 });
