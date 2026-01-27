@@ -23,8 +23,8 @@ const queryClient = new QueryClient();
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        <Router>
+      <Router>
+        <AppProvider>
           <Routes>
             <Route path="/" element={<MainPage />} />
             <Route path="/station/:label" element={<StationPage />} />
@@ -33,8 +33,8 @@ const App = () => {
             <Route path="/third-party" element={<TextPage text={softwareText} />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
-        </Router>
-      </AppProvider>
+        </AppProvider>
+      </Router>
     </QueryClientProvider>
   );
 };

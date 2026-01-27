@@ -2,6 +2,7 @@ import React, { createContext, useReducer, useEffect, useContext } from 'react';
 import { DateTime } from "luxon";
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // --- Initial State and Contexts ---
 const baseUrl = import.meta.env.VITE_API_BASE_URL;
@@ -46,6 +47,8 @@ const appReducer = (state, action) => {
 // --- App Provider Component ---
 export const AppProvider = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Initial data fetch for all stations on application load
   
@@ -66,16 +69,40 @@ export const AppProvider = ({ children }) => {
         type: 'SET_STATIONS',
         payload: stations
       });
-      if (stations.length > 0) {
-        const selectedStationPayload = { ...stations[0], listId: 0 };
-        dispatch({ type: 'SELECT_STATION', payload: selectedStationPayload });
-      }
     }
     if (error) {
       dispatch({ type: 'SET_ERROR', payload: 'Failed to load station data.' });
     }
 
   }, [stations, error]);
+
+  // Keep selectedStation in sync with URL label across the app
+  useEffect(() => {
+    if (!stations || stations.length === 0) return;
+
+    // Extract label from /station/:label
+    const match = location.pathname.match(/^\/station\/([^/]+)$/);
+    const routeLabel = match ? decodeURIComponent(match[1]) : null;
+
+    if (routeLabel) {
+      const matchIndex = stations.findIndex((s) => s.label === routeLabel);
+      if (matchIndex >= 0) {
+        if (state.selectedStation?.label !== routeLabel) {
+          const payload = { ...stations[matchIndex], listId: matchIndex };
+          dispatch({ type: 'SELECT_STATION', payload });
+        }
+      } else {
+        // Invalid label: surface error and send to NotFound
+        dispatch({ type: 'SET_ERROR', payload: 'Station not found.' });
+        navigate('/not-found', { replace: true });
+      }
+    } else if (!state.selectedStation) {
+      // No label in URL and nothing selected: pick first station
+      const fallback = { ...stations[0], listId: 0 };
+      dispatch({ type: 'SELECT_STATION', payload: fallback });
+    }
+  // Depend only on routing and station list to avoid thrashing when selectedStation changes locally
+  }, [stations, location.pathname, dispatch, navigate]);
 
   return (
     <AppStateContext.Provider value={state}>

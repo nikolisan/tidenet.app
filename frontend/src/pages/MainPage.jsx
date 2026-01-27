@@ -1,21 +1,21 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Layout from '../components/Layout';
 import { useAppState, useAppDispatch } from '../context/AppContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
 
-import { Waves, MapPinned, Info, ChevronsRight  } from 'lucide-react';
+import { Waves, MapPinned, Info } from 'lucide-react';
 
 // Map imports
-import { MapContainer, TileLayer, useMap, Marker, Popup, Tooltip } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet';
-import ScrollArea from '../components/ScrollArea';
 import { AlertBox } from '../components/Alert';
+import { StationCardsCollection } from '../components/StationCards';
 
 const themeDark = import.meta.env.VITE_DARK_THEME;
 
 
-const MapContainerBox = ({ stations = []}) => {
+const MapContainerBox = ({ stations = [], hoveredStationId = null, setHoveredStationId }) => {
   const { appTheme } = useAppState();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -36,6 +36,25 @@ const MapContainerBox = ({ stations = []}) => {
       className: 'bg-transparent',
       iconSize: [24, 24],
       iconAnchor: [12, 12],
+    });
+  }, []);
+
+  const hoveredIcon = useMemo(() => {
+    const iconColorClass = 'text-secondary'
+    
+    const customSvgHtml = `
+      <div class="${iconColorClass}" style="filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="8"/>
+        </svg>
+      </div>
+    `;
+
+    return new L.divIcon({
+      html: customSvgHtml,
+      className: 'bg-transparent',
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
     });
   }, []);
 
@@ -64,12 +83,17 @@ const MapContainerBox = ({ stations = []}) => {
         />
           if (stations) {
             stations.map((station, index) => {
+              const isHovered = hoveredStationId === station.station_id;
               return(
                 <Marker
                   key={station.station_id} 
                   position={[station.lat, station.lon]}
-                  eventHandlers={{click: () => handleMarkerClick(station, index)}}
-                  icon={customIcon}>
+                  eventHandlers={{
+                    click: () => handleMarkerClick(station, index),
+                    mouseover: () => setHoveredStationId(station.station_id),
+                    mouseout: () => setHoveredStationId(null)
+                  }}
+                  icon={isHovered ? hoveredIcon : customIcon}>
 
                   <Tooltip>
                     <div className="text-neutral font-bold">{station.label}</div>
@@ -87,13 +111,7 @@ const MapContainerBox = ({ stations = []}) => {
 
 const MainPage = () => {
   const { stations, isLoading, error } = useAppState();
-  const dispatch = useAppDispatch();
-
-  const handleCardStationClick = (station, index) => {
-    const selectedStationPayload = { ...station, listId: index };
-    dispatch({ type: 'SELECT_STATION', payload: selectedStationPayload });
-  };
-
+  const [hoveredStationId, setHoveredStationId] = useState(null);
 
   return (
     <Layout>
@@ -125,7 +143,7 @@ const MainPage = () => {
                     <span className="loading loading-spinner loading-lg"></span>
                   </div>
                 ) : !error ? (
-                  <MapContainerBox stations={stations} />
+                  <MapContainerBox stations={stations} hoveredStationId={hoveredStationId} setHoveredStationId={setHoveredStationId} />
                 ) : 
                   <div className="m-4">
                     <AlertBox type="ERROR" message={error?.response?.data?.detail || error.message || String(error)} />
@@ -142,31 +160,11 @@ const MainPage = () => {
                   <h2 className="card-title text-lg">Recent readings</h2>
                 </div>
                 
-                <div className="">
-                  <ScrollArea className="h-[70vh] w-full">
-                    <div className="grid sm:grid-cols-1 min-[120rem]:grid-cols-2 gap-4 w-full pr-4">
-                    {stations.map((station, index) => (
-                      <Link key={station.station_id} to={`/station/${station.label}`} onClick={() => handleCardStationClick(station, index)}>
-                        <div className="stats shadow border border-base-200 w-full overflow-hidden">
-                          <div className="stat">
-
-                            <div className="stat-title">{station.label}</div>
-                            <div className="stat-value text-primary flex items-center">
-                              <div className="grow">
-                                {station.latest_reading.toFixed(1)} m
-                              </div>
-                              <div className='text-secondary'>
-                                <ChevronsRight />
-                              </div>  
-                            </div>
-                            <div className="stat-desc">{moment.utc(station.date_time).format('D MMMM YYYY, hh:mm')}</div>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                    </div>
-                  </ScrollArea>
-                </div>
+                <StationCardsCollection 
+                  stations={stations} 
+                  hoveredStationId={hoveredStationId} 
+                  setHoveredStationId={setHoveredStationId} 
+                />
               </div>
             </div>
           </div>

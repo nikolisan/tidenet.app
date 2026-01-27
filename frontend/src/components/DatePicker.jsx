@@ -83,15 +83,17 @@ const DatePicker = () => {
     const endValue = localDates.end;
 
     return(
-        <div className='flex flex-col lg:flex-row gap-1 lg:gap-3'>
-            <label className="input">
-                <span className="label">Start date</span>
-                <input name="start-date" value={startValue}  type="datetime-local" onChange={handleDateChange} />
-            </label>
-            <label className="input">
-                <span className="label">End date</span>
-                <input name="end-date" value={endValue}  type="datetime-local" onChange={handleDateChange} />
-            </label>
+        <div className="tooltip" data-tip="The maximum allowed range is 6 months.">
+            <div className='flex flex-col lg:flex-row gap-1 lg:gap-3'>
+                <label className="input">
+                    <span className="label">Start date</span>
+                    <input name="start-date" value={startValue}  type="datetime-local" onChange={handleDateChange} />
+                </label>
+                <label className="input">
+                    <span className="label">End date</span>
+                    <input name="end-date" value={endValue}  type="datetime-local" onChange={handleDateChange} />
+                </label>
+            </div>
         </div>
     )
 }

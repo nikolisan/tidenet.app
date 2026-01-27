@@ -1,6 +1,7 @@
 import Footer from './Footer';
 import { Link, useLocation  } from "react-router";
 import { Menu, Anchor, MapPin, Home, Info, ChevronsDown, ShieldX, MonitorCloud, Copyright } from "lucide-react";
+import { useRef, useEffect } from 'react';
 
 import { useAppState, useAppDispatch } from '../context/AppContext';
 
@@ -10,7 +11,8 @@ import Modal from './Modal';
 
 
 const Sidebar = ({children}) => {
-  const { stations, appTheme } = useAppState();
+  const { stations, selectedStation } = useAppState();
+  const selectedStationRef = useRef(null);
 
   let location = useLocation()
   const dispatch = useAppDispatch();
@@ -20,16 +22,20 @@ const Sidebar = ({children}) => {
     dispatch({ type: 'SELECT_STATION', payload: selectedStationPayload });
   };
 
-  const handleAbout = () => {
-    
-  }
-
-
+  // Scroll to selected station when on a station page
+  useEffect(() => {
+    if (selectedStation && selectedStationRef.current && location.pathname.startsWith('/station/')) {
+      selectedStationRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }
+  }, [selectedStation, location.pathname]);
 
   return (
     <div className="drawer lg:drawer-open">
       <input id="my-drawer-4" type="checkbox" className="drawer-toggle" />
-      <div className="drawer-content flex flex-col h-screen">
+      <div className="drawer-content flex flex-col">
         {/* Navbar */}
         <nav className="navbar w-full bg-base-200 lg:hidden border-b border-base-300">
           {/* Sidebar toggle icon */}
@@ -51,7 +57,7 @@ const Sidebar = ({children}) => {
 
       <div className="drawer-side border-r border-base-300 z-40">
         <label htmlFor="my-drawer-4" aria-label="close sidebar" className="drawer-overlay"></label>
-        <div className="flex flex-col bg-base-200 h-screen w-80">
+        <div className="flex flex-col bg-base-200 w-80 min-h-screen">
           <Link to="/">
               <h2 className="px-4 my-3 text-2xl font-bold tracking-tight text-primary flex items-center gap-3 cursor-pointer">
                 <Anchor className="h-6 w-6" />
@@ -66,9 +72,13 @@ const Sidebar = ({children}) => {
           </Link>
           <ul className="menu w-full flex-grow">
             <li className="menu-title">Stations</li>
-            <ScrollArea className="h-[calc(100vh-60vh)] md:h-[calc(100vh-50vh)]">
+            <ScrollArea className="h-[calc(100vh-60vh)] md:h-[calc(100vh-50vh)] lg:h-[calc(100vh-40vh)]">
             {stations.map((station, index) => (
-              <li key={station.station_id}  className={`rounded-lg text-lg ${decodeURI(location.pathname) === `/station/${station.label}` ? "menu-active" : ""}`}>
+              <li 
+                key={station.station_id}  
+                className={`rounded-lg text-lg ${decodeURI(location.pathname) === `/station/${station.label}` ? "menu-active" : ""}`}
+                ref={selectedStation?.station_id === station.station_id ? selectedStationRef : null}
+              >
                 <Link to={`/station/${station.label}`} onClick={() => handleMenuClick(station, index)}>
                   <MapPin className="mr-2 h-4 w-4 opacity-70" />
                   {station.label}
