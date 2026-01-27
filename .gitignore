@@ -231,6 +231,9 @@ __marimo__/
 # Custom
 .helpers/
 .python-version
+./deploy/*
+remote-deploy.sh
+deploy/**
 
 # node modules
 *node_modules/
