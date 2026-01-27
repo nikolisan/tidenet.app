@@ -129,14 +129,14 @@ flowchart TD
 - Frontend builds with Vite and is served by Nginx in the `frontend` container.
 - Backend is FastAPI with async SQLAlchemy. DB connection string comes from `DATABASE_URL_SQLALCHEMY` and points to PostgreSQL on RDS.
 - Redis provides caching for station lists and per-station readings. TTL is controlled via `CACHE_TIME_LIMIT` in the `.env` variables.
-- Static tidal assets (coefficients and tables) live under `app/tide-data/` and are read at request time. they’re generated once and bundled in the backend container.
+- Static tidal assets (coefficients and tables) live under `app/tide-data/` and are read at request time. They’re generated once and bundled in the backend container.
 - Ingestion scripts under `scripts/` pull Environment Agency tide gauge data and write into the DB. Cron jobs run on the EC2 host to pull data every hour.
 - SSL is terminated by the certbot-managed Nginx setup.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## API Summary
-> *In production the API is not externall accessible.*
+> *In production the API is not externally accessible.*
 - `GET /api/stations` — Summary of stations, coordinates, and latest readings.
 - `GET /api/data/{station_label}?start_date=...&end_date=...` — Time series with observed values, astronomical tide, and surge residual; Redis‑cached windows supported.
 - `GET /api/data/{station_label}/table` — Tide table metrics (e.g., MHWS/MLWS) for the station.
@@ -151,7 +151,7 @@ This builds and runs the Nginx‑served frontend and the FastAPI backend, along 
 1. *Clone the repo*
 
    ```bash
-   git clone https://github.com/nikolisan/xb-gui.git
+   git clone https://github.com/nikolisan/tidenet.app.git
    ```
    > ℹ If you do not have a `git` client, simply unzip the [source code repository](https://github.com/nikolisan/tidenet.app/archive/master.zip).
 
@@ -169,7 +169,7 @@ This builds and runs the Nginx‑served frontend and the FastAPI backend, along 
 
 ### Configuration
 Backend environment variables:
-- `DATABASE_URL_SQLALCHEMY` — SQLAlchemy connection string (eg. `postgresql+psycopg://{USER}:{PASSWORD}@{DB_HOST}:{PORT}/{DB_NAME` )
+- `DATABASE_URL_SQLALCHEMY` — SQLAlchemy connection string (eg. `postgresql+psycopg://{USER}:{PASSWORD}@{DB_HOST}:{PORT}/{DB_NAME}` )
 - `REDIS_HOST` — `"redis"`
 - `REDIS_PORT` — `6379`
 - `CACHE_TIME_LIMIT` — Cache TTL in seconds (default `3600`)
