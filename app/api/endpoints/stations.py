@@ -34,7 +34,9 @@ async def get_stations(request: Request, redis=Depends(get_redis)) -> Dict[str, 
     if cached:
         # Return cached station dict
         print(" ===> Loaded the stations from REDIS")
-        return json.loads(cached)
+        cached_obj = json.loads(cached)
+        # Ensure alphabetical order by label even when served from cache
+        return dict(sorted(cached_obj.items(), key=lambda item: item[0].lower()))
 
     try:
         # Retrieve the db_engine stored in the state of the app associated with this request
@@ -62,6 +64,7 @@ async def get_stations(request: Request, redis=Depends(get_redis)) -> Dict[str, 
         async with engine.connect() as conn:
             conn:AsyncConnection
             
+            station_list = []
             stations:Dict[str, Any] = {}
             result: CursorResult = await conn.execute(text(query))
             rows: MappingResult = result.mappings()
@@ -79,7 +82,11 @@ async def get_stations(request: Request, redis=Depends(get_redis)) -> Dict[str, 
                     lat=row["lat"],
                     lon=row["long"]
                 )
-                stations[str(row["label"])] = station_obj.model_dump()
+                station_list.append((str(row["label"]), station_obj.model_dump()))
+
+            # Sort alphabetically by label before returning and caching
+            station_list.sort(key=lambda item: item[0].lower())
+            stations = {label: data for label, data in station_list}
                 
         # Cache the stations dict as JSON
         await redis.set(cache_key, json.dumps(stations), ex=CACHE_TIME_LIMIT)    

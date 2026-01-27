@@ -113,13 +113,14 @@ def retrieve_station_readings(station_id: int, db_url:str) -> pd.DataFrame:
 
 
 if __name__ == '__main__':
+    
     from numpy.linalg import LinAlgError
     
     def print_progress(name:str, done: int, total: int, bar_len: int = 30):
         frac = 0 if total == 0 else done / total
         filled = int(bar_len * frac)
         bar = "#" * filled + "." * (bar_len - filled)
-        print(f"[{bar}] {done}/{total} - {name} {10*" "}", end="\r", flush=True)
+        print(f"[{bar}] {done}/{total} - {name} {10*' '}", end="\r", flush=True)
     
     
     # Get the connection string from the environment variable

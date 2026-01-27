@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List
+from typing import List, Dict
 from pydantic_extra_types.pendulum_dt import DateTime
 
 class Reading(BaseModel):
@@ -29,9 +29,18 @@ class Station(BaseModel):
 
 
 class StationDataResponse(BaseModel):
-    """Schema for the final API response containing chart data."""
+    """Schema for the API response containing chart data."""
     station_id: int
     station_label: str
     date_time: List[str]
     values: List[float]
+    astro: List[float]
+    surge: List[float]
+    actual_start_date: str
+    actual_end_date: str
     unit: str
+
+class StationTableResponse(BaseModel):
+    """Schema for the API response containing chart data."""
+    station_label: str
+    tidal_info: Dict[str, float]

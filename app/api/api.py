@@ -10,4 +10,3 @@ router = APIRouter(
 
 router.include_router(stations.router)
 router.include_router(data.router)
-router.include_router(testing.router)
