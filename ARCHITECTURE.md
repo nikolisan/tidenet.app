@@ -4,14 +4,14 @@ Below is a high-level view of the stack, data paths, and where caching and stati
 
 ```mermaid
 flowchart TD
-    U[User Browser] -->|HTTPS| F[Frontend container<br/>(Nginx serving Vite build)]
-    F -->|REST /api| B[Backend container<br/>FastAPI + SQLAlchemy]
+    U[User Browser] -->|HTTPS| F["Frontend container<br/>Nginx serving Vite build"]
+    F -->|REST /api| B["Backend container<br/>FastAPI + SQLAlchemy"]
     B -->|Async queries| DB[(PostgreSQL / RDS)]
     B -->|Cache lookups| R[(Redis 7.2)]
-    B -->|Reads tidal coefficients & tables| T[(tide-data JSON files<br/>in app/tide-data/)]
-    Scripts[[Ingestion scripts<br/>(fetch_historical.py, fetch_latest.py, etc.)]] -->|Load tide gauge readings| DB
-    EA[Environment Agency<br/>Real-time Data API] --> Scripts
-    CB[Certbot container] -.-> F
+    B -->|Reads tidal coefficients & tables| T[("tide-data JSON files<br/>in app/tide-data/")]
+    Scripts[["Ingestion scripts<br/>(fetch_historical.py, fetch_latest.py, etc.)"]] -->|Load tide gauge readings| DB
+    EA["Environment Agency<br/>Real-time Data API"] --> Scripts
+    CB["Certbot container"] -.-> F
 
     classDef external fill:#f2f2f2,stroke:#999,stroke-width:1px,color:#333;
     classDef data fill:#e7f0ff,stroke:#4a78c2,stroke-width:1px,color:#1d3e7a;
