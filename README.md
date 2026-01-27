@@ -2,15 +2,10 @@
 <!-- TTemplate procided by https://github.com/othneildrew/Best-README-Template -->
 <a id="readme-top"></a>
 </br>
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![GNU-GPL-v3][license-shield]][license-url]
+
 <div align="center">
 
-
-  <h3 align="center"><b>TideNet</b></h3>
+  <h1 align="center"><b>TideNet</b></h1>
 
   <p align="center">
     <i>near real‑time tide and surge readings for UK coasts</i>
@@ -45,7 +40,13 @@
     <li><a href="#acknowledgements">Acknowledgements</a></li>
   </ol>
 </details>
+</br>
 
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![GNU-GPL-v3][license-shield]][license-url]
 
 ---
 ## About The Project
