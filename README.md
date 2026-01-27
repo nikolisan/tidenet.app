@@ -1,10 +1,9 @@
 <!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
-<!-- TTemplate procided by https://github.com/othneildrew/Best-README-Template -->
+<!-- Template procided by https://github.com/othneildrew/Best-README-Template -->
 <a id="readme-top"></a>
 </br>
 
 <div align="center">
-
   <h1 align="center"><b>TideNet</b></h1>
 
   <p align="center">
@@ -17,6 +16,7 @@
     &middot;
     <a href="https://github.com/nikolisan/tidenet.app/issues/new?labels=enhancement&template=feature_request.md">Request Feature</a>
   </p>
+  <img src=".github/assets/app-screenshot.gif" alt="TideNet Application Screenshot" width="500" />
 </div>
 
 <details>
