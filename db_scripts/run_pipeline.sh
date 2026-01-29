@@ -12,8 +12,8 @@ LOGS_DIR="$SCRIPT_DIR/logs"
 mkdir -p "$LOGS_DIR"
 LOG_FILE="$LOGS_DIR/dbupdate_$(date +%Y%m%d_%H%M%S).log"
 
-# Redirect all output to log file and console
-exec > >(tee -a "$LOG_FILE")
+# Redirect all output to log file and console with line buffering for real-time tail -f
+exec > >(stdbuf -oL tee -a "$LOG_FILE")
 exec 2>&1
 
 # Remove logs older than 5 days
