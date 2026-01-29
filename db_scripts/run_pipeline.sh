@@ -37,6 +37,9 @@ else
     exit 1
 fi
 
+# Enable unbuffered Python output for real-time logging
+export PYTHONUNBUFFERED=1
+
 echo ""
 echo "=========================================="
 echo "  Database update"
