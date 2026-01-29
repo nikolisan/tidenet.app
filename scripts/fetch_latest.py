@@ -1,155 +1,234 @@
 import os
-import requests
+import asyncio
+import aiohttp
 import pendulum
+from datetime import timezone
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio.engine import AsyncEngine
+from contextlib import asynccontextmanager
+from typing import Dict, List, Any, cast
 
-from typing import List
-
-from sqlalchemy import create_engine, text, CursorResult
-from sqlalchemy.engine import Engine
-from  datetime import datetime
-from requests.exceptions import HTTPError
-from dotenv import load_dotenv
-
-# from scripts.csv_loader import url_to_pd, process_historical_csv, async_csv_to_pd
-from scripts.utilities import coloured_fn_name
-from app.models import Reading, Station, StationDataResponse
-
-load_dotenv()
-
-_RETRIES = 5
+from models import Reading, Station
 
 
-def create_db_engine() -> Engine:
-    """Create a new SQLAlchemy Engine."""
-    conn_string = os.getenv("DATABASE_URL_SQLALCHEMY", "")
-    echo = os.getenv("DEBUG_ECHO", "False").lower() in ('true', '1')
+@asynccontextmanager
+async def create_async_db_engine(conn_string: str):
+    """Create a new SQLAlchemy Async Engine."""
+       
     if not conn_string:
         raise ValueError("DATABASE_URL_SQLALCHEMY is not set in the environment.")
     
-    engine = create_engine(
-        conn_string,
-        echo=echo,
-        pool_pre_ping=True
-    )
-
-    # Optional connection test
-    with engine.connect() as conn:
-        conn.execute(text("SELECT 1"))
+    print("Starting db engine ...", end=' ')
+    try:
+        async_engine: AsyncEngine = create_async_engine(
+            url = conn_string,
+            echo= False,
+            pool_pre_ping=True
+        )
+    except Exception as err:
+        print(f"Error: {err}")
+        raise
     
-    return engine
-
-
-# TODO: add the thresholds and discard the values that are outside the limits
-def fetch_latest_15min_reading(engine) -> None:
-    api_url: str = os.getenv("API_ROOT", "") + os.getenv("MEASURES_URI", "")
-    fn_name = coloured_fn_name("CYAN")
+    print("Engine started.")
     
-    if engine is None:
-        raise ConnectionError(f"{fn_name}: SQLAlchemy Engine is unavailable.")
+    yield async_engine
     
-    with engine.begin() as conn:
-        print(f"{fn_name} Connection established")
+    print("Disposing db engine ...", end=' ')
+    try:
+        await async_engine.dispose()
+    except Exception as err:
+        print(f"Error: {err}")
+        raise
+    print("Engine disposed.")
+
+
+async def retrieve_latest_reading_datetime(engine: AsyncEngine):
+    async_session = async_sessionmaker(engine, expire_on_commit=False)
+    
+    async with async_session() as session:
+        query = select(Station.station_id, Station.notation).order_by(Station.station_id)
+        result = await session.execute(query)
+        stations = result.fetchall()
         
-        # Get stations as dict {notation: id}
-        stations: dict[str, str] = {}
-        result: List = conn.execute(text("SELECT notation, station_id FROM stations")).mappings().all()
-        for row in result:
-            stations[row["notation"]] = row["station_id"]
-        print(f"{fn_name} Loaded {len(stations)} stations from database.")
+        latest_date = {}
+        for (station_id, station_notation) in stations:
+            reading_query = select(Reading.date_time).where(
+                Reading.station_id == station_id
+            ).order_by(Reading.date_time.desc()).limit(1)
+            
+            reading_result = await session.execute(reading_query)
+            row = reading_result.first()
+            
+            if row:
+                dt = row[0].astimezone(timezone.utc)
+                latest_date[station_notation] = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         
-        # Fetch latest readings for all stations
-        print(f"{fn_name} Fetching latest readings")
-        for n in range(_RETRIES):
-            try:
-                response: requests.Response = requests.get(api_url)
-                response.raise_for_status()
-                
-            except HTTPError as exc:
-                print(f"Attempt {n+1}: HTTP error {exc.response.status_code}")
-                if n == _RETRIES - 1:
-                    raise
-            
-            except Exception as e:
-                print(f"Attempt {n+1}: {e}")
-                if n == _RETRIES - 1:
-                    raise
-            
-            items: List = response.json()["items"]
+        return latest_date
 
-        print(f"{fn_name} Downloaded {len(items)} latest 15min readings.")
-        rows_to_insert = []
-        for item in items:
-            station_notation = item["station"].split("/")[-1]
-            # TODO: Remove lines 83-84 to include all stations
-            if not station_notation == "E70039":
-                continue
-            station_id = stations.get(station_notation)
-            if not station_id:
-                print(f"Station {station_notation} not found in DB, skipping.")
-                continue
 
-            unit_name = item.get("unitName")
-            reading = item.get("latestReading")
-            if not reading:
-                print(f"{fn_name} Invalid reading for station {station_notation}, skipping.")
-                continue
-            
-            value = reading.get("value")
-            date_time = pendulum.parse(reading["dateTime"])
-
-            rows_to_insert.append({
-                "station_id": station_id,
-                "value": value,
-                "date_time": date_time,
-                "unit_name": unit_name
-            })
-        # Save readings to table
-        conn.execute(text("""
-            INSERT INTO readings (station_id, value, date_time, unit_name)
-            VALUES (:station_id, :value, :date_time, :unit_name)
-            ON CONFLICT (station_id, date_time) DO NOTHING;
-        """), rows_to_insert)
-            
-    print(f"{fn_name} Saved {len(rows_to_insert)} readings to `readings` table.")
-        
-
-def fetch_latest_missing(engine):
-    if engine is None:
-        raise ConnectionError("SQLAlchemy Engine is unavailable.")
-    query = '''
-        SELECT DISTINCT ON (r.station_id)
-            r.station_id,
-            s.notation,
-            r.date_time
-        FROM readings as r
-        RIGHT JOIN stations AS s ON s.station_id = r.station_id
-        ORDER BY r.station_id, r.date_time DESC
+async def retrieve_latest_readings_from_station(session: aiohttp.ClientSession, semaphore: asyncio.Semaphore, station_notation: str, date_time: str, offset: int = 0) -> List[Dict[str, Any]]:
+    '''
+    Retrieve the latest readings for a station from the EA Tide API
     '''
     
-    with engine.connect() as conn:
-        latest_stored_readings = {}
-        result: List = conn.execute(text(query)).mappings().all()
-        return result
-        for row in result:
-            latest_stored_readings[row["notation"]] = pendulum.instance(row["date_time"]).in_tz("UTC")
+    url = f"https://environment.data.gov.uk/flood-monitoring/id/stations/{station_notation}/readings?since={date_time}&_limit=500&_offset={offset}"
     
-    return latest_stored_readings
+    max_retries = 5
+    timeout = aiohttp.ClientTimeout(total=20.0)
     
+    async with semaphore:
+        for attempt in range(max_retries):
+            try:
+                async with session.get(url, timeout=timeout) as res:
+                    res.raise_for_status()
+                    data = await res.json()
+                    return data.get("items", [])
+                    
+            except asyncio.TimeoutError:
+                print(f"  [INFO] {station_notation} | Timeout (attempt {attempt+1}/{max_retries})")
+                if attempt == max_retries - 1:
+                    raise
+            except aiohttp.ClientConnectorDNSError as err:
+                print(f"  [DEBUG] {station_notation} | DNS Connection Error: {err}")
+                raise
+            except aiohttp.ClientResponseError as err:
+                print(f"  [DEBUG] {station_notation} | HTTP {err.status}: {err.message}")
+                if attempt == max_retries - 1:
+                    raise
+            except aiohttp.ClientError as err:
+                print(f"  [DEBUG] {station_notation} | Client Error: {err}")
+                if attempt == max_retries - 1:
+                    raise
+            except Exception as err:
+                print(f"  [ERROR] {station_notation} | Unexpected {type(err).__name__}: {err}")
+                if attempt == max_retries - 1:
+                    raise
+        
+        return []
+
+
+async def fetch_station_data_task(session: aiohttp.ClientSession, semaphore: asyncio.Semaphore, station_notation: str, date_time: str) -> Dict[str, List[Any]]:
+    ''' Task for the concurrent data fetching '''
+    try:
+        print(f"Fetching data for {station_notation}")
+        items = []
+        req_counter = 1
+        response_items = await retrieve_latest_readings_from_station(session, semaphore, station_notation, date_time, offset=0)
+        items.extend(response_items)
+        
+        while len(response_items) == 500:
+            print(f"{station_notation}: Page {req_counter+1}", end="\r")
+            response_items = await retrieve_latest_readings_from_station(session, semaphore, station_notation, date_time, offset=req_counter*500)
+            items.extend(response_items)
+            req_counter += 1
+        
+        return {station_notation : items}
+    
+    except Exception as err:
+        print(f"\n[ERROR] {station_notation} failed: {type(err).__name__}")
+        return {station_notation : []}
+
+
+async def insert_readings_to_db(engine: AsyncEngine, all_results: List[Dict[str, List[Any]]]) -> int:
+    """
+    Insert readings into the database using ORM, filtering for whole hours only.
+    """
+    
+    async_session = async_sessionmaker(engine, expire_on_commit=False)
+    async with async_session() as session:
+        # Get station_id mapping from notation
+        result = await session.execute(select(Station.station_id, Station.notation))
+        station_map = {row[1]: row[0] for row in result.fetchall()}
+        
+        total_inserted = 0
+
+        for result_dict in all_results:
+            for notation, readings in result_dict.items():
+                print()
+                print(f"Inserting readings for {notation}...", end=' ')
+                station_id = station_map.get(notation)
+                if not station_id:
+                    print(f"  [WARNING] Station {notation} not found in database")
+                    continue
+                
+                # Filter for whole hours only (minute == 0 and second == 0)
+                readings_to_insert = []
+                for reading in readings:
+                    dt: pendulum.DateTime = cast(pendulum.DateTime, pendulum.parse(reading['dateTime']))
+                    if dt.minute == 0 and dt.second == 0:
+                        # Extract unit from measure URL
+                        unit_name: str = reading['measure'].split('-')[-1] if 'measure' in reading else 'mAOD'
+                        readings_to_insert.append(
+                            Reading(
+                                station_id=station_id,
+                                value=reading['value'],
+                                date_time=dt,
+                                unit_name=unit_name,
+                                notation=notation
+                            )
+                        )
+                
+                # Insert to database
+                if readings_to_insert:
+                    # Check which readings already exist
+                    existing_times_query = select(Reading.date_time).where(
+                        Reading.station_id == station_id,
+                        Reading.date_time.in_([r.date_time for r in readings_to_insert])
+                    )
+                    existing_result = await session.execute(existing_times_query)
+                    existing_times = {row[0] for row in existing_result.fetchall()}
+                    
+                    # Filter out existing readings
+                    new_readings = [r for r in readings_to_insert if r.date_time not in existing_times]
+                    
+                    if new_readings:
+                        session.add_all(new_readings)
+                        await session.flush()
+                        total_inserted += len(new_readings)
+                        print(f"  [INFO] {notation}: Inserted {len(new_readings)} readings (skipped {len(existing_times)} duplicates)")
+                    else:
+                        print(f"  [INFO] {notation}: All {len(readings_to_insert)} readings already exist (skipped)")
+
+        await session.commit()
+    
+    return total_inserted
+
+
+async def main(db_conn_string: str, max_concurrent_requests: int = 5):
+    
+    # Get latest reading timestamps from database
+    async with create_async_db_engine(db_conn_string) as async_engine:
+        latest_datetime_dict: Dict[str, str] = await retrieve_latest_reading_datetime(async_engine)
+    
+    
+        async with aiohttp.ClientSession() as session:
+            latest_datetime_dict = {"E70039": "2026-01-27T23:00:00Z"}
+            
+            semaphore = asyncio.Semaphore(max_concurrent_requests)
+            tasks = [
+                fetch_station_data_task(session, semaphore, notation, date) for notation, date in latest_datetime_dict.items()
+            ]
+
+            all_results = await asyncio.gather(*tasks)
+        
+        # Insert fetched data into database
+        
+        total_inserted = await insert_readings_to_db(async_engine, all_results)
+        print(f"\n[INFO] Total readings inserted: {total_inserted}")
+
+
+
 
 if __name__ == '__main__':
-    now = pendulum.now(tz='UTC')
-
-    engine: Engine = create_db_engine()
+    import sys
+    import time
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
-    result = fetch_latest_missing(engine)
+    db_conn_string = os.getenv("DATABASE_URL_SQLALCHEMY", "postgresql+psycopg://postgres:1234@localhost:5432/tide")
+    max_concurrent_requests = 5
     
-    engine.dispose()
-
-
-    # there is an issue with station notation "XXXXX-anglian"
-    # the latest script to load from pickle does not load those stations
-
-    for row in result:
-        print(row["notation"], row["date_time"])
-        # latest_stored_readings[row["notation"]] = pendulum.instance(row["date_time"]).in_tz("UTC")
-    
+    start = time.perf_counter()
+    asyncio.run(main(db_conn_string, max_concurrent_requests))
+    print(f"{time.perf_counter() - start:.2f}s")
