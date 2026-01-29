@@ -9,7 +9,7 @@ RUN npm install
 
 # Copy source and build
 COPY frontend/ .
-RUN npm run build
+RUN npm run build -- --mode production
 
 # --- Production image ---
 FROM --platform=linux/arm64 nginx:1.25-alpine

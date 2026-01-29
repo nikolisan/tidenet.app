@@ -203,7 +203,6 @@ async def main(db_conn_string: str, max_concurrent_requests: int = 5):
     
     
         async with aiohttp.ClientSession() as session:
-            latest_datetime_dict = {"E70039": "2026-01-27T23:00:00Z"}
             
             semaphore = asyncio.Semaphore(max_concurrent_requests)
             tasks = [
