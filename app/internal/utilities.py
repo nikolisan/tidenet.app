@@ -22,3 +22,15 @@ def json_to_utide_coef(data, is_bunch=True):
         return Bunch(processed) if is_bunch else processed
     # 3. Primitives
     return data
+
+def colours(colour):
+    return {
+        'CYAN': '\033[96m',
+        'RED' : "\033[31m",
+        'BOLD': '\033[1m',
+        'ENDC': '\033[0m',
+    }.get(colour, 0)
+
+def coloured_fn_name(colour):
+    import inspect        
+    return f"{colours(colour)}[{inspect.currentframe().f_back.f_code.co_name}]{colours("ENDC")}" # type: ignore

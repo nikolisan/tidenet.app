@@ -35,12 +35,15 @@ async def check_duplicates():
             print(f"\nFound {len(duplicates)} duplicate combinations:")
             for station_id, date_time, count in duplicates[:10]:
                 print(f"  Station {station_id}, {date_time}: {count} entries")
+            await engine.dispose()
+            return 1  # Exit code 1: duplicates found
         else:
             print("\nNo duplicates found")
-    
-    await engine.dispose()
+            await engine.dispose()
+            return 0  # Exit code 0: no duplicates
 
 if __name__ == '__main__':
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    asyncio.run(check_duplicates())
+    exit_code = asyncio.run(check_duplicates())
+    sys.exit(exit_code)
